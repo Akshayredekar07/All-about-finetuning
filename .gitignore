@@ -46,3 +46,7 @@ runs/
 # Lightning studio files
 .lightning_studio/*
 /.lightning_studio
+
+.cursor-server
+.vscode-server
+.windsurf-server
