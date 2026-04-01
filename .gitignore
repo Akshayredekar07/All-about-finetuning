@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Dependencies
+requirements.txt
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Environment variables
+.env
+.env.local
+
+# Jupyter / IDE / editors
+*.ipynb_checkpoints
+.idea/
+.vscode/
+*.swp
+*~
+
+# Hugging Face / model outputs
+models/
+checkpoints/
+output/
+runs/
+
+# Anything you don't want pushed to Hugging Face Hub
+*.bin
+*.pt
+*.pth
+*.safetensors
+
+# Lightning studio files
+.lightning_studio/*
+/.lightning_studio
