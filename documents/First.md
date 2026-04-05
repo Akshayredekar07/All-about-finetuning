@@ -1,7 +1,6 @@
-# HuggingFace Learning Roadmap ⚡
-### From Zero to Production — Python ML Engineer Path
+# **HuggingFace Learning Roadmap ⚡**
 
----
+### From Zero to Production — Python ML Engineer Path
 
 ## What We Are Building Toward
 
@@ -12,10 +11,7 @@ datasets → transformers → fine-tune → optimize → deploy → agents
 Every library in this roadmap feeds the next one.
 You are not learning tools in isolation — you are building one complete pipeline.
 
----
-
-## PHASE 0 — Platform Foundation
-> Status: COMPLETED
+## **PHASE 0 — Platform Foundation**
 
 ### 1. HuggingFace Hub + huggingface_hub
 
@@ -47,7 +43,7 @@ from huggingface_hub import (
 )
 ```
 
----
+
 
 ### 2. Datasets
 
@@ -149,7 +145,7 @@ Counter(ds["label"])   # count values
 pip install datasets
 ```
 
----
+
 
 ## PHASE 1 — Core ML
 > Status: NEXT
@@ -252,7 +248,7 @@ pip install transformers torch
 pip install transformers[torch]   # all torch deps
 ```
 
----
+
 
 ### 4. Tokenizers
 
@@ -311,7 +307,7 @@ pip install tokenizers
 # usually installed automatically with transformers
 ```
 
----
+
 
 ### 5. Evaluate
 
@@ -354,7 +350,7 @@ evaluate.list_evaluation_modules()
 pip install evaluate
 ```
 
----
+
 
 ## PHASE 2 — Training & Fine-tuning
 > Learn after Phase 1
@@ -406,7 +402,7 @@ accelerate launch --num_processes=4 --mixed_precision=fp16 train.py
 pip install accelerate
 ```
 
----
+
 
 ### 7. PEFT — Parameter Efficient Fine-Tuning
 
@@ -474,7 +470,7 @@ merged = model.merge_and_unload()  # merge adapter into base model weights
 pip install peft
 ```
 
----
+
 
 ### 8. TRL — Transformer Reinforcement Learning
 
@@ -538,7 +534,7 @@ from trl import GRPOTrainer
 pip install trl
 ```
 
----
+
 
 ### 9. Safetensors
 
@@ -573,7 +569,7 @@ with safe_open("model.safetensors", framework="pt") as f:
 pip install safetensors
 ```
 
----
+
 
 ## PHASE 3 — Specialized Libraries
 > Pick based on your goal. Not all required.
@@ -623,7 +619,7 @@ model.push_to_hub("username/my-embedding-model")
 pip install sentence-transformers
 ```
 
----
+
 
 ### 11. Diffusers
 > If you are building: image generation, video generation, audio generation
@@ -666,7 +662,7 @@ pip install diffusers
 pip install diffusers[torch]
 ```
 
----
+
 
 ### 12. timm — PyTorch Image Models
 > If you are building: image classification, object detection, feature extraction
@@ -707,7 +703,7 @@ transforms  = timm.data.create_transform(**data_config, is_training=False)
 pip install timm
 ```
 
----
+
 
 ### 13. Gradio (deep dive)
 > You already used this for Spaces. Now learn it properly.
@@ -767,7 +763,7 @@ gr.Chatbot()         # chat history display
 pip install gradio
 ```
 
----
+
 
 ### 14. smolagents
 > If you are building: AI agents, tool-using models, multi-step reasoning
@@ -802,7 +798,7 @@ pip install smolagents
 pip install smolagents[all]   # all tool integrations
 ```
 
----
+
 
 ## PHASE 4 — Low Level / Advanced
 > Learn when you hit GPU memory/speed limitations
@@ -842,7 +838,7 @@ model = AutoModelForCausalLM.from_pretrained(
 pip install bitsandbytes
 ```
 
----
+
 
 ### 16. Kernels + CUDA Programming
 > Advanced. Learn when you need maximum speed or want to understand model internals.
@@ -934,7 +930,7 @@ pip install kernels
 pip install triton         # for writing custom GPU kernels in Python
 ```
 
----
+
 
 ## The Full Pipeline — How Everything Connects
 
@@ -943,7 +939,7 @@ pip install triton         # for writing custom GPU kernels in Python
                     ================
 
   DATA                  MODEL                 TRAINING
-  ----                  -----                 --------
+  -                  --                 --
   datasets         →    transformers     →    accelerate
   (load, process,       (pipeline,            (multi-GPU,
    map, filter,          AutoModel,            mixed precision)
@@ -951,13 +947,13 @@ pip install triton         # for writing custom GPU kernels in Python
                          Trainer)         →   peft
                                               (LoRA, QLoRA,
   STORAGE                                      train 1% of params)
-  -------
+  -
   safetensors      →                      →   trl
   (save weights)                              (SFTTrainer, DPO,
                                                RLHF, GRPO)
 
   MEASURE               DEPLOY                SPECIALIZE
-  -------               ------                ----------
+  -                               -
   evaluate         →    huggingface_hub  →    sentence-transformers
   (accuracy, F1,        (push model,           (embeddings, RAG)
    ROUGE, BLEU)          create space)
@@ -971,12 +967,12 @@ pip install triton         # for writing custom GPU kernels in Python
                                               (AI agents)
 
                     LOW LEVEL
-                    ---------
+                    
                     kernels + triton + cuda
                     (maximum performance)
 ```
 
----
+
 
 ## Recommended Learning Order — Week by Week
 
@@ -994,7 +990,7 @@ Week 12    gradio deep dive + deploy your model as a Space
 Week 13+   smolagents / bitsandbytes / kernels / triton
 ```
 
----
+
 
 ## GitHub Repo Structure for All Learnings
 
@@ -1044,7 +1040,7 @@ huggingface-learning/
 └── README.md
 ```
 
----
+
 
 ## Key Rule
 
@@ -1053,7 +1049,7 @@ huggingface-learning/
 Never push `.bin`, `.safetensors`, or `.pt` files to GitHub.
 Push them with `model.push_to_hub("username/my-model")` instead.
 
----
+
 
 *Last updated: April 2026*
 *Covers: huggingface_hub, datasets, transformers, tokenizers, evaluate,*

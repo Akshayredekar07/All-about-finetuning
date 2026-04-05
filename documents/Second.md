@@ -1,21 +1,10 @@
-## HuggingFace Learning
-
-> From Zero to Production — Pure structure, no code
-
----
-
-## Where We Are Going
+# **HuggingFace Learning**
 
 ```
 Hub → Datasets → Transformers → Fine-tuning → Optimization → Deployment → Agents
 ```
 
----
-
-## PHASE 0 — Platform Foundation
-> Status: COMPLETED
-
----
+## **PHASE 0 — Platform Foundation**
 
 ### 1. HuggingFace Hub + huggingface_hub library
 
@@ -57,7 +46,7 @@ Hub → Datasets → Transformers → Fine-tuning → Optimization → Deploymen
 - pause_space(), restart_space()
 - Space hardware management
 
----
+
 
 ### 2. Datasets
 
@@ -158,12 +147,12 @@ Hub → Datasets → Transformers → Fine-tuning → Optimization → Deploymen
 - Private vs public datasets
 - Dataset cards and README metadata
 
----
+
 
 ## PHASE 1 — Core ML
 > Status: NEXT
 
----
+
 
 ### 3. Transformers
 
@@ -339,7 +328,7 @@ Audio
 - Streaming generation token by token
 - GenerationConfig — reusable generation settings
 
----
+
 
 ### 4. Tokenizers
 
@@ -379,7 +368,7 @@ Audio
 - When to use each
 - Parallelism in fast tokenizers
 
----
+
 
 ### 5. Evaluate
 
@@ -412,12 +401,10 @@ Audio
 - evaluate.list_evaluation_modules() — discover metrics
 - Creating custom metrics
 
----
 
-## PHASE 2 — Training and Fine-tuning
-> Learn after Phase 1
 
----
+## **PHASE 2 — Training and Fine-tuning**
+
 
 ### 6. Accelerate
 
@@ -455,7 +442,7 @@ Audio
 - notebook_launcher — run distributed from notebook
 - PartialState — lightweight distributed state
 
----
+
 
 ### 7. PEFT — Parameter Efficient Fine-Tuning
 
@@ -500,7 +487,7 @@ Audio
 - Switching between adapters
 - Combining adapters — add, cat, svd, linear
 
----
+
 
 ### 8. TRL — Transformer Reinforcement Learning
 
@@ -534,7 +521,7 @@ Audio
 - create_reference_model() — frozen copy for KL divergence
 - get_kbit_device_map()
 
----
+
 
 ### 9. Safetensors
 
@@ -558,12 +545,12 @@ Audio
 - Fallback to .bin when safetensors not available
 - Converting .bin checkpoints to .safetensors
 
----
 
-## PHASE 3 — Specialized
+
+## **PHASE 3 — Specialized**
 > Pick based on your goal
 
----
+
 
 ### 10. Sentence Transformers
 > For: semantic search, RAG, embeddings, similarity, clustering
@@ -610,7 +597,7 @@ Audio
   - RerankingEvaluator
 - push_to_hub() for sharing models
 
----
+
 
 ### 11. Diffusers
 > For: image generation, video generation, audio synthesis
@@ -665,7 +652,7 @@ Audio
 - torch.compile() for speed
 - float16 vs bfloat16
 
----
+
 
 ### 12. timm — PyTorch Image Models
 > For: image classification, feature extraction, transfer learning
@@ -709,7 +696,7 @@ Audio
 - out_indices — which stages to extract
 - Using timm as backbone for detection and segmentation
 
----
+
 
 ### 13. Gradio — Deep Dive
 > For: building ML demos, internal tools, deployed apps
@@ -773,7 +760,7 @@ Audio
 - API mode — every Gradio app is also a REST API automatically
 - Embedding in other webpages via iframe or web components
 
----
+
 
 ### 14. smolagents
 > For: AI agents, tool-using models, multi-step reasoning
@@ -815,11 +802,11 @@ Audio
 - Custom system prompts
 - Few-shot examples in agent prompt
 
----
 
-## PHASE 4 — Low Level and Advanced
 
----
+## **PHASE 4 — Low Level and Advanced**
+
+
 
 ### 15. Bitsandbytes
 > Learn when you hit GPU memory limits during fine-tuning or inference
@@ -849,7 +836,7 @@ Audio
 - Paged versions — paged_adam_8bit, paged_adamw_8bit
 - Memory savings from quantized optimizer states
 
----
+
 
 ### 16. Kernels + CUDA + Triton
 > Advanced — for maximum performance and understanding model internals
@@ -915,7 +902,7 @@ Audio
 - CUDA Programming Guide — NVIDIA official docs
 - PyTorch custom ops tutorial
 
----
+
 
 ## Full Connection Map
 
@@ -956,7 +943,7 @@ LOW LEVEL                                                      │
   CUDA ───────────── raw GPU programming in C++                │
 ```
 
----
+
 
 ## Week by Week Schedule
 
@@ -978,8 +965,6 @@ Week  19      smolagents
 Week  20      bitsandbytes
 Weeks 21+     kernels, triton, CUDA
 ```
-
----
 
 ## GitHub Repo Structure
 
@@ -1024,16 +1009,13 @@ huggingface-learning/
 └── README.md
 ```
 
----
-
-## The One Rule
+## **The One Rule**
 
 **Code lives on GitHub. Model weights live on HuggingFace Hub.**
 
 Never push `.bin`, `.safetensors`, or `.pt` files to GitHub.
 Use `model.push_to_hub()` to put weights on HF Hub instead.
 
----
 
 *Covers: huggingface_hub, datasets, transformers, tokenizers, evaluate,*
 *accelerate, peft, trl, safetensors, sentence-transformers, diffusers,*
