@@ -10,7 +10,7 @@ env/
 ENV/
 
 # Dependencies
-requirements.txt
+# requirements.txt
 Pipfile
 Pipfile.lock
 poetry.lock

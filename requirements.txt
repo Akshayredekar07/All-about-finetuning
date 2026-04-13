@@ -1,0 +1,14 @@
+torch
+torchvision
+transformers
+diffusers
+accelerate
+datasets
+tokenizers
+huggingface-hub
+safetensors
+Pillow
+requests
+numpy
+scipy
+tqdm
