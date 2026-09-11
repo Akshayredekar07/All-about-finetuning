@@ -58,3 +58,15 @@ runs/
 
 bert-imdb/
 bert-imdb-final/
+
+
+# Any HuggingFace Trainer output dirs
+bert-imdb/
+bert-imdb-final/
+gpt2-wikitext2/
+gpt2-wikitext2-final/
+gpt2-hp-search/
+
+# Checkpoint subfolders in general, in case output_dir names change later
+checkpoint-*/
+**/checkpoint-*/
