@@ -1,4 +1,4 @@
-# **Finetuning From Scratch**
+## **Finetuning From Scratch**
 
 ### **Purpose**
 
@@ -166,27 +166,7 @@ Capstones add a `Dockerfile` and a `src/` directory.
 
 ### **Method-selection gate**
 
-```mermaid
-flowchart TD
-    Start[New task or behavior change] --> Q1{Can a 200-line system prompt solve it?}
-    Q1 -- Yes --> SP[Stop. Use prompting.]
-    Q1 -- No --> Q2{Can RAG solve it?}
-    Q2 -- Yes --> RAG[Stop. Use RAG.]
-    Q2 -- No --> Q3{What must the model learn?}
-    Q3 -- Format, style, instructions --> SFT[SFT with LoRA or QLoRA: Stage 04]
-    Q3 -- Preferences, refusals, tone --> DPO[DPO or KTO: Stage 05]
-    Q3 -- Reasoning with a verifier --> GRPO[GRPO or RLVR: Stage 05]
-    Q3 -- Tool use, multi-step agents --> AGENT[Agentic SFT then RL: Stage 09]
-    Q3 -- Domain knowledge --> SFT
-    SFT --> Base{Base model chosen and licensed?}
-    Base -- No --> B1[Stage 01]
-    Base -- Yes --> Data{Data ready?}
-    Data -- No --> D1[Stage 03]
-    Data -- Yes --> FW{Framework}
-    FW --> F1[Single GPU: Unsloth]
-    FW --> F2[Multi GPU: Axolotl]
-    FW --> F3[Full control: TRL and PEFT]
-```
+![method selection](finetuing-method-selection.svg)
 
 ### **Isolated environments**
 

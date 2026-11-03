@@ -1,13 +1,13 @@
-# **Stage 02 — Core ML Stack**
+## **Stage 02: Core ML Stack**
 
-**Libraries:** `transformers` 5.22.1 · `tokenizers` 0.23.3 · `evaluate` 0.4.6 · `lighteval` 0.13.0 · `lm-evaluation-harness` 0.4.13
+**Libraries:** `transformers` · `tokenizers` · `evaluate` · `lighteval` · `lm-evaluation-harness`
 **Outcome:** run any model, fine-tune it with the built-in trainer, and measure it with a metric that matches the task.
 
-## **Transformers 5.22.1**
+### **0.2 Transformers**
 
-The most important library in the ecosystem: 1M+ pretrained models for text, vision, audio, and multimodal tasks. Version 5 is PyTorch-only and requires **Python ≥3.11** and `huggingface_hub` in the 1.31–2.x range [1][2].
+Transformers provides pretrained models for text, vision, audio, and multimodal tasks. It is PyTorch-only and requires **Python 3.11 or newer** and a compatible Hub client.
 
-**Step A — Pipeline API**
+**Step A: Pipeline API**
 ```python
 from transformers import pipeline
 
@@ -40,17 +40,17 @@ print(transformers.__version__)
 print(get_supported_tasks())
 ```
 
-Text
-- text-classification — sentiment, topic, intent (`sentiment-analysis` alias)
-- token-classification — NER, POS tagging (`ner` alias)
-- question-answering — extractive QA
+**Text**
+- text-classification, sentiment, topic, intent (`sentiment-analysis` alias)
+- token-classification, NER, POS tagging (`ner` alias)
+- question-answering, extractive QA
 - table-question-answering
-- text-generation — open-ended generation and chat
-- fill-mask — masked language modeling
-- zero-shot-classification — no training needed
-- feature-extraction — embeddings from any model
+- text-generation, open-ended generation and chat
+- fill-mask, masked language modeling
+- zero-shot-classification, no training needed
+- feature-extraction, embeddings from any model
 
-Vision
+**Vision**
 - image-classification
 - object-detection
 - image-segmentation
@@ -63,20 +63,20 @@ Vision
 - keypoint-matching
 - video-classification
 
-Audio
-- automatic-speech-recognition — Whisper and others
+**Audio**
+- automatic-speech-recognition, Whisper and others
 - audio-classification
 - zero-shot-audio-classification
 - text-to-audio
 - text-to-speech
 
-Multimodal
-- image-text-to-text — vision-language chat, captioning
+**Multimodal**
+- image-text-to-text, vision-language chat, captioning
 - visual-question-answering
 - document-question-answering
 - any-to-any
 
-**Pipelines removed in Transformers 5** — `summarization`, `translation`, `text2text-generation`, `image-to-text` (replaced by `image-text-to-text`), and `conversational` (removed earlier). Two replacements:
+**Pipelines no longer supported:** `summarization`, `translation`, `text2text-generation`, `image-to-text` (replaced by `image-text-to-text`), and `conversational` (removed earlier). Two replacements:
 
 ```python
 # Option 1: a modern chat model through the text-generation pipeline
@@ -95,9 +95,9 @@ ids = model.generate(**inputs, max_new_tokens=80)
 print(tok.decode(ids[0], skip_special_tokens=True))
 ```
 
-If you must follow an old tutorial that uses the removed pipelines, install the older line in a separate environment: `pip install -U "transformers<5"`.
+If you must follow an old tutorial that uses the removed pipelines, use a separate environment and install a Transformers release supported by that tutorial.
 
-**Step B — AutoTokenizer + AutoModel**
+**Step B: AutoTokenizer + AutoModel**
 ```python
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -111,9 +111,9 @@ with torch.no_grad():
 probs = outputs.logits.softmax(-1)
 ```
 
-**Step C — Task-specific model classes**
+**Step C: Task-specific model classes**
 
-Natural language understanding
+**Natural language understanding**
 ```python
 AutoModelForSequenceClassification   # text classification, sentiment
 AutoModelForTokenClassification      # NER, POS tagging
@@ -121,7 +121,7 @@ AutoModelForQuestionAnswering        # extractive span QA
 AutoModelForMultipleChoice           # multiple choice
 ```
 
-Natural language generation
+**Natural language generation**
 ```python
 AutoModelForCausalLM                 # GPT-style decoder models
 AutoModelForMaskedLM                 # BERT-style fill-mask
@@ -129,7 +129,7 @@ AutoModelForSeq2SeqLM                # encoder-decoder: T5, BART
 AutoModelForSpeechSeq2Seq            # Whisper-style ASR
 ```
 
-Vision
+**Vision**
 ```python
 AutoModelForImageClassification
 AutoModelForObjectDetection
@@ -139,20 +139,20 @@ AutoModelForDepthEstimation
 AutoModelForImageToImage
 ```
 
-Vision plus language (multimodal)
+**Vision plus language (multimodal)**
 ```python
 AutoModelForImageTextToText          # LLaVA, Qwen-VL, PaliGemma, SmolVLM style models
 AutoModelForVisualQuestionAnswering
 AutoModelForDocumentQuestionAnswering
 ```
 
-Audio
+**Audio**
 ```python
 AutoModelForAudioClassification
 AutoModelForCTC                      # Wav2Vec2-style ASR
 ```
 
-Base and preprocessing
+**Base and preprocessing**
 ```python
 AutoModel                # raw hidden states, embeddings
 AutoConfig               # architecture config
@@ -161,7 +161,7 @@ AutoFeatureExtractor     # audio preprocessing
 AutoProcessor            # tokenizer + image/audio processor for multimodal models
 ```
 
-**Step D — Trainer**
+**Step D: Trainer**
 ```python
 import numpy as np
 import evaluate
@@ -217,23 +217,23 @@ trainer.push_to_hub("username/my-model")
 ```
 
 **Trainer topic checklist**
-- `TrainingArguments` — all training hyperparameters
-- `Trainer` — standard supervised training loop
-- `Seq2SeqTrainer` and `Seq2SeqTrainingArguments` — for seq2seq models that use `generate()`
+- `TrainingArguments`, all training hyperparameters
+- `Trainer`, standard supervised training loop
+- `Seq2SeqTrainer` and `Seq2SeqTrainingArguments`, for seq2seq models that use `generate()`
 - `TrainerCallback` and `EarlyStoppingCallback`
-- `compute_metrics` — custom evaluation function
+- `compute_metrics`, custom evaluation function
 - Mixed precision: `bf16=True` on newer GPUs, `fp16=True` on older GPUs
 - Data collators:
-  - `DataCollatorWithPadding` — classification
-  - `DataCollatorForSeq2Seq` — summarization, translation
-  - `DataCollatorForLanguageModeling` — causal and masked LM
-  - `DataCollatorForTokenClassification` — NER
+  - `DataCollatorWithPadding`, classification
+  - `DataCollatorForSeq2Seq`, summarization, translation
+  - `DataCollatorForLanguageModeling`, causal and masked LM
+  - `DataCollatorForTokenClassification`, NER
 
 **Model loading and saving**
 ```python
 model = AutoModelForCausalLM.from_pretrained(
     "Qwen/Qwen3-1.7B",
-    dtype="auto",          # load in the saved precision (v5 name, was torch_dtype)
+    dtype="auto",          # load in the saved precision
     device_map="auto",     # place layers across available GPUs and CPU
 )
 model.save_pretrained("./model")
@@ -299,9 +299,9 @@ pip install -U transformers torch
 pip install -U "transformers[torch]"   # all torch deps
 ```
 
-## **Tokenizers 0.23.3**
+### **0.3 Tokenizers**
 
-The fast tokenization library (written in Rust) that powers all `AutoTokenizer` classes. It is how models actually read text [28].
+The fast tokenization library, written in Rust, powers `AutoTokenizer` classes and converts text into model inputs.
 
 ```python
 from transformers import AutoTokenizer
@@ -343,7 +343,7 @@ tokenizer.add_special_tokens({"additional_special_tokens": ["tool_token"]})
 # model.resize_token_embeddings(len(tokenizer))
 ```
 
-In v5, call the tokenizer directly — `encode_plus()` and `batch_encode_plus()` are removed.
+Call the tokenizer directly. `encode_plus()` and `batch_encode_plus()` are no longer available.
 
 **Train your own tokenizer from scratch**
 ```python
@@ -368,13 +368,13 @@ fast.save_pretrained("./my-tokenizer")
 ```
 
 **Key concepts**
-- BPE (Byte-Pair Encoding) — GPT-style models
-- Byte-level BPE — GPT-2, RoBERTa
-- WordPiece — BERT
-- SentencePiece and Unigram — T5, LLaMA, many multilingual models
+- BPE (Byte-Pair Encoding), GPT-style models
+- Byte-level BPE, GPT-2, RoBERTa
+- WordPiece, BERT
+- SentencePiece and Unigram, T5, LLaMA, many multilingual models
 - Character-level tokenization
 - Vocabulary and `vocab_size`
-- Subword tokenization — why words get split
+- Subword tokenization, why words get split
 - Why padding and truncation exist
 - What `attention_mask` does and why it matters
 - `token_type_ids` for sentence pairs
@@ -383,22 +383,22 @@ fast.save_pretrained("./my-tokenizer")
 - Truncation strategies: `longest_first`, `only_first`, `only_second`
 - Overflow tokens and stride for long documents
 - Chat templates for instruction-tuned models
-- Fast (Rust) versus slow (Python) tokenizers — unified around the fast implementation in v5, with parallel tokenization
+- Fast (Rust) versus slow (Python) tokenizers, unified around the fast implementation in the current release, with parallel tokenization
 
 **Key install**
 ```bash
 pip install -U tokenizers
 ```
 
-## **Evaluation stack**
+### **0.4 Evaluation stack**
 
-Three libraries with three different jobs. The source notes blurred them into "evaluate, and LightEval for LLMs". The accurate split matters because each one answers a different question [50][51][52].
+Three libraries have different jobs. Each answers a different question.
 
-| Library | Version | Job | Reach |
-|---|---|---|---|
-| `evaluate` | 0.4.6 (Sep 2025) | Classic metric implementations: accuracy, F1, ROUGE, BLEU | Stable but no longer the recommended path for LLM benchmarks |
-| `lighteval` | 0.13.0 (Nov 2025) | HF task frameworks with inspect-ai / accelerate / nanotron / vLLM entry points, 1000+ tasks | No release since Nov 2025 — treat as stable-but-static |
-| `lm-evaluation-harness` | 0.4.13 (Aug 2026) | Standard benchmark harness: MMLU, GSM8K, HellaSwag, IFEval… | The one to reach for when a JD names a benchmark |
+| Library | Job | Reach |
+|---|---|---|
+| `evaluate` | Classic metric implementations: accuracy, F1, ROUGE, BLEU | Useful for standard metrics |
+| `lighteval` | Hugging Face task framework with inspect-ai, accelerate, nanotron, and vLLM entry points, plus more than 1,000 tasks | A maintained task framework |
+| `lm-evaluation-harness` | Standard benchmark harness for MMLU, GSM8K, HellaSwag, IFEval, and others | Useful when a role requires a named benchmark |
 
 **`evaluate` usage**
 ```python
@@ -433,7 +433,7 @@ Generation and translation: `bleu` and `sacrebleu`, `rouge` (rouge1, rouge2, rou
 
 Semantic: `bertscore`, `bleurt`.
 
-Code: `code_eval` — executes generated code; sandbox only.
+Code: `code_eval`, executes generated code; sandbox only.
 
 Also learn: creating custom metrics and sharing them on the Hub. The full surface is `evaluate.load()`, `evaluate.combine()`, `metric.compute()`, and `metric.add_batch()` for streaming evaluation.
 
@@ -445,7 +445,7 @@ lm-eval ls tasks
 ```
 Backend extras: `pip install "lm_eval[hf]"`, `"lm_eval[vllm]"`, `"lm_eval[api]"`.
 
-**Decontamination — the real API.** The harness does not expose a `decontaminate(train_dataset=..., eval_datasets=[...], ngram_size=8)` function, and there is no `--decontamination_ngram_size=8` flag; both snippets in the source notes describe an API that does not exist. Contamination detection is implemented in `lm_eval/decontaminate.py` over **precomputed n-gram files**: you generate n-gram files plus `info.json` for your training set, pass the directory with `--decontamination_ngrams_path`, and the evaluator excludes contaminated documents and reports a second metric with a `decontaminate` suffix. It is **disabled by default for new tasks** unless the task overrides `should_decontaminate` and `doc_to_decontamination_query`. The harness uses 13-grams as its default basis [53][54].
+**Decontamination in the evaluation harness.** The harness does not expose a `decontaminate(train_dataset=..., eval_datasets=[...], ngram_size=8)` function, and there is no `--decontamination_ngram_size=8` flag; This API does not exist. Code written against it will fail on import. Contamination detection is implemented in `lm_eval/decontaminate.py` over **precomputed n-gram files**: you generate n-gram files plus `info.json` for your training set, pass the directory with `--decontamination_ngrams_path`, and the evaluator excludes contaminated documents and reports a second metric with a `decontaminate` suffix. It is **disabled by default for new tasks** unless the task overrides `should_decontaminate` and `doc_to_decontamination_query`. The harness uses 13-grams as its default basis.
 
 **Key install**
 ```bash
@@ -455,52 +455,56 @@ pip install "lm_eval[hf]"
 pip install scikit-learn rouge_score sacrebleu
 ```
 
----
 
-## **Attention architectures**
+### **0.5 Attention architectures**
 
-The 2026 model landscape is mostly a story about attention. Every open frontier release changed how the KV cache is stored, and that change determines what the serving stack can do with long context.
+Current model architectures make attention a central design choice. Every open frontier release changed how the KV cache is stored, and that change determines what the serving stack can do with long context.
 
 **Standard multi-head attention:**
 
-```
-Attention(Q,K,V) = softmax(QK^T / √d_k) × V
-Multi-head: Concat(head_1, ..., head_h) × W_O
-where head_i = Attention(QW_i^Q, KW_i^K, VW_i^V)
-```
+$$
+\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^{\mathsf T}}{\sqrt{d_k}}\right)V
+$$
 
-Memory complexity is O(n²d) — quadratic in sequence length.
+$$
+\mathrm{MultiHead}=\mathrm{Concat}(head_1,\ldots,head_h)W_O
+$$
+
+where
+
+$$
+head_i=\mathrm{Attention}(QW_i^Q,KW_i^K,VW_i^V)
+$$
+Memory complexity is $\mathcal{O}(n^2d)$, quadratic in sequence length.
 
 **Grouped-query attention (GQA):** multiple Q heads share the same K and V heads. Llama-3 uses 32 Q heads against 8 KV heads, a 4× KV cache reduction. GQA is the standard in every 2026 open LLM.
 
 **Multi-query attention (MQA):** all Q heads share a single K/V head. Maximum savings, with a quality trade-off.
 
-**Multi-head latent attention (MLA) — DeepSeek:** the KV cache stores only a compressed latent (`c^KV = W^{DKV} h`), decompressed at attention time, which is roughly a 50× cache reduction against MHA. Native in vLLM and SGLang.
+**Multi-head latent attention (MLA), DeepSeek:** the KV cache stores only a compressed latent, $c^{KV}=W^{DKV}h$, decompressed at attention time, which is roughly a 50× cache reduction against MHA. Native in vLLM and SGLang.
 
 **DeepSeek V4 hybrid attention (CSA + HCA):** Compressed Sparse Attention adds a sparse pattern with compression; Heavily Compressed Attention compresses aggressively in the tail layers. Together they reach ~27% of single-token inference FLOPs versus V3.2 at 1M-token context, which is what makes 1M context viable without linear approximations.
 
-**FlashAttention 1 / 2 / 3:** FA1 tiles the computation so the full n×n matrix is never materialised, giving HBM reads of O(n). FA2 improves parallelism and is roughly 2× faster than FA1 on A100. FA3 is H100-optimised — warp-specialised, FP8, TMA async memory — at roughly 1.5–2× FA2, and it is the default in vLLM from 0.8 onward.
+**FlashAttention 1 / 2 / 3:** FA1 tiles the computation so the full n×n matrix is never materialised, giving HBM reads of $\mathcal{O}(n)$. FA2 improves parallelism and is roughly 2× faster than FA1 on A100. FA3 is H100-optimised, warp-specialised, FP8, TMA async memory, at roughly 1.5–2× FA2, and is supported by current vLLM releases.
 
-**Sparse and linear attention (frontier):** Mamba (SSM-based, O(n) complexity), RWKV (O(1) inference, parallelisable training), and the Qwen3.5/3.8 Gated Delta Network hybrid of SSM and Transformer, which is what gives those models their high inference throughput.
+**Sparse and linear attention (frontier):** Mamba (SSM-based, with $\mathcal{O}(n)$ complexity), RWKV (with $\mathcal{O}(1)$ inference and parallelisable training), and the Qwen3.5/3.8 Gated Delta Network hybrid of SSM and Transformer, which is what gives those models their high inference throughput.
 
 The practical consequence for this roadmap: KV cache size is not a serving detail, it is an architectural property that sets your context ceiling before you write a single line of serving code. Stage 10 quantifies it.
 
-## **Parallelism for training and inference**
+### **0.6 Parallelism for training and inference**
 
-Data parallelism replicates the model and all-reduces gradients. FSDP shards parameters, gradients and optimizer states and is functionally equivalent to ZeRO-3. Tensor parallelism splits individual layers and needs NVLink. Pipeline parallelism splits layers across stages and pays a bubble of `(p-1)/m`. Expert parallelism splits MoE experts and pays an all-to-all.
+Data parallelism replicates the model and all-reduces gradients. FSDP shards parameters, gradients, and optimizer states, and is functionally equivalent to ZeRO-3. Tensor parallelism splits individual layers and needs NVLink. Pipeline parallelism splits layers across stages and pays a bubble of $\frac{p-1}{m}$. Expert parallelism splits MoE experts and pays an all-to-all.
 
-The full taxonomy, the code, and the failure signatures are in Stage 8.
+See Stage 8 for the full taxonomy, code, and failure signatures.
 
----
 
-## **Worksheet additions**
 
-## **Scope**
-Stage 1 is where the stack stops being a list of APIs and becomes a model. Three things have to work together: a tokenizer that decides what the model sees, a model class that decides what the model does, and an evaluation harness that decides whether any of it mattered.
+### **0.7 Scope**
+Stage 2 is where the stack stops being a list of APIs and becomes a model. Three things have to work together: a tokenizer that decides what the model sees, a model class that decides what the model does, and an evaluation harness that decides whether any of it mattered.
 
 **Exit criterion:** fine-tune a pretrained model on a public dataset, push it to the Hub, and produce a metric you can defend in an interview.
 
-## **Environment**
+### **0.8 Environment**
 ```bash
 pip install -U transformers torch tokenizers
 pip install -U "transformers[torch]"
@@ -509,70 +513,68 @@ pip install "lm_eval[hf]"
 pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 ```
 
-`transformers` 5.22.1 requires **Python ≥3.11** and `huggingface-hub<3.0,>=1.31.0`. The `transformers[torch]` extra pulls `torch>=2.6` and `accelerate>=1.1.0`.
+The `transformers[torch]` extra installs PyTorch support and its associated dependencies.
 
----
 
-### **Pipeline API**
-- [ ] Text: `text-classification`, `token-classification`, `question-answering`, `table-question-answering`, `text-generation`, `fill-mask`, `zero-shot-classification`, `feature-extraction`
-- [ ] Vision: `image-classification`, `object-detection`, `image-segmentation`, `mask-generation`, `zero-shot-image-classification`, `zero-shot-object-detection`, `depth-estimation`, `image-to-image`, `image-feature-extraction`, `keypoint-matching`, `video-classification`
-- [ ] Audio: `automatic-speech-recognition`, `audio-classification`, `zero-shot-audio-classification`, `text-to-audio`, `text-to-speech`
-- [ ] Multimodal: `image-text-to-text`, `visual-question-answering`, `document-question-answering`, `any-to-any`
-- [ ] Confirming the live list with `get_supported_tasks()`
-- [ ] Replacing the removed pipelines: `summarization`, `translation`, `text2text-generation`, `image-to-text`, `conversational`
-- [ ] Isolating an old tutorial in `pip install -U "transformers<5"`
+### **0.9 Pipeline API**
+- Text: `text-classification`, `token-classification`, `question-answering`, `table-question-answering`, `text-generation`, `fill-mask`, `zero-shot-classification`, `feature-extraction`
+- Vision: `image-classification`, `object-detection`, `image-segmentation`, `mask-generation`, `zero-shot-image-classification`, `zero-shot-object-detection`, `depth-estimation`, `image-to-image`, `image-feature-extraction`, `keypoint-matching`, `video-classification`
+- Audio: `automatic-speech-recognition`, `audio-classification`, `zero-shot-audio-classification`, `text-to-audio`, `text-to-speech`
+- Multimodal: `image-text-to-text`, `visual-question-answering`, `document-question-answering`, `any-to-any`
+- Confirming the live list with `get_supported_tasks()`
+- Replacing the removed pipelines: `summarization`, `translation`, `text2text-generation`, `image-to-text`, `conversational`
+- Using a separate environment and a compatible Transformers release for an old tutorial
 
-### **AutoTokenizer**
-- [ ] `from_pretrained()` for any tokenizer
-- [ ] Encoding a single sentence, sentence pairs, and batches
-- [ ] Calling the tokenizer directly (`encode_plus()` is removed)
-- [ ] Padding strategies — `longest`, `max_length`, `do_not_pad`
-- [ ] Truncation strategies — `longest_first`, `only_first`, `only_second`
-- [ ] `return_tensors` — `pt`, `np`
-- [ ] Special tokens — CLS, SEP, PAD, UNK, MASK, BOS, EOS
-- [ ] `offset_mapping` — map tokens back to characters
-- [ ] `word_ids()` — map tokens back to words
-- [ ] Decoding with `skip_special_tokens`
-- [ ] Chat templates via `apply_chat_template()`
-- [ ] Saving and loading custom tokenizers
-- [ ] Adding new special tokens and resizing model embeddings
-- [ ] Fast (Rust) tokenizers as the default, with parallel tokenization
+### **0.10 AutoTokenizer**
+- `from_pretrained()` for any tokenizer
+- Encoding a single sentence, sentence pairs, and batches
+- Calling the tokenizer directly (`encode_plus()` is removed)
+- Padding strategies, `longest`, `max_length`, `do_not_pad`
+- Truncation strategies, `longest_first`, `only_first`, `only_second`
+- `return_tensors`, `pt`, `np`
+- Special tokens, CLS, SEP, PAD, UNK, MASK, BOS, EOS
+- `offset_mapping`, map tokens back to characters
+- `word_ids()`, map tokens back to words
+- Decoding with `skip_special_tokens`
+- Chat templates via `apply_chat_template()`
+- Saving and loading custom tokenizers
+- Adding new special tokens and resizing model embeddings
+- Fast (Rust) tokenizers as the default, with parallel tokenization
 
-### **AutoModel classes**
-- [ ] NLU: `AutoModelForSequenceClassification`, `AutoModelForMultipleChoice`, `AutoModelForTokenClassification`, `AutoModelForQuestionAnswering`
-- [ ] NLG: `AutoModelForCausalLM`, `AutoModelForMaskedLM`, `AutoModelForSeq2SeqLM`, `AutoModelForSpeechSeq2Seq`
-- [ ] Vision: `AutoModelForImageClassification`, `AutoModelForObjectDetection`, `AutoModelForSemanticSegmentation`, `AutoModelForInstanceSegmentation`, `AutoModelForDepthEstimation`, `AutoModelForImageToImage`
-- [ ] Multimodal: `AutoModelForImageTextToText`, `AutoModelForVisualQuestionAnswering`, `AutoModelForDocumentQuestionAnswering`
-- [ ] Audio: `AutoModelForAudioClassification`, `AutoModelForCTC`
-- [ ] Base and utility: `AutoModel`, `AutoConfig`, `AutoImageProcessor`, `AutoFeatureExtractor`, `AutoProcessor`
+### **0.11 AutoModel classes**
+- NLU: `AutoModelForSequenceClassification`, `AutoModelForMultipleChoice`, `AutoModelForTokenClassification`, `AutoModelForQuestionAnswering`
+- NLG: `AutoModelForCausalLM`, `AutoModelForMaskedLM`, `AutoModelForSeq2SeqLM`, `AutoModelForSpeechSeq2Seq`
+- Vision: `AutoModelForImageClassification`, `AutoModelForObjectDetection`, `AutoModelForSemanticSegmentation`, `AutoModelForInstanceSegmentation`, `AutoModelForDepthEstimation`, `AutoModelForImageToImage`
+- Multimodal: `AutoModelForImageTextToText`, `AutoModelForVisualQuestionAnswering`, `AutoModelForDocumentQuestionAnswering`
+- Audio: `AutoModelForAudioClassification`, `AutoModelForCTC`
+- Base and utility: `AutoModel`, `AutoConfig`, `AutoImageProcessor`, `AutoFeatureExtractor`, `AutoProcessor`
 
-### **Trainer**
-- [ ] `TrainingArguments` — all training hyperparameters
-- [ ] `Trainer` — the standard supervised loop
-- [ ] `processing_class` (replaces the old `tokenizer` argument)
-- [ ] `Seq2SeqTrainer` and `Seq2SeqTrainingArguments`
-- [ ] `TrainerCallback`, `EarlyStoppingCallback`
-- [ ] `compute_metrics`
-- [ ] Mixed precision: `bf16=True` on newer GPUs, `fp16=True` on older
-- [ ] Collators: `DataCollatorWithPadding`, `DataCollatorForSeq2Seq`, `DataCollatorForLanguageModeling`, `DataCollatorForTokenClassification`
+### **0.12 Trainer**
+- `TrainingArguments`, all training hyperparameters
+- `Trainer`, the standard supervised loop
+- `processing_class` (replaces the old `tokenizer` argument)
+- `Seq2SeqTrainer` and `Seq2SeqTrainingArguments`
+- `TrainerCallback`, `EarlyStoppingCallback`
+- `compute_metrics`
+- Mixed precision: `bf16=True` on newer GPUs, `fp16=True` on older
+- Collators: `DataCollatorWithPadding`, `DataCollatorForSeq2Seq`, `DataCollatorForLanguageModeling`, `DataCollatorForTokenClassification`
 
-### **Configuration, generation, architectures**
-- [ ] `AutoConfig` and `from_pretrained()` with `device_map="auto"` and `dtype="auto"`
-- [ ] `save_pretrained()`, `push_to_hub()`, model cards
-- [ ] Loading community kernels through `attn_implementation`
-- [ ] `model.generate()`, `max_new_tokens`, greedy, beam search, sampling, temperature, top-k, top-p, repetition penalty, length penalty, constrained generation
-- [ ] Streaming with `TextStreamer` and `TextIteratorStreamer`
-- [ ] `GenerationConfig` for reusable settings
-- [ ] Encoder-only: BERT, RoBERTa, DistilBERT, ALBERT, DeBERTa, XLM-RoBERTa
-- [ ] Decoder-only: GPT-2, Llama, Mistral, Qwen, Gemma, Phi, Falcon
-- [ ] Seq2seq: T5/Flan-T5, BART, Pegasus, mT5, MarianMT
-- [ ] Vision: ViT, DeiT, Swin, DINOv2, CLIP, SigLIP
-- [ ] Multimodal: LLaVA, Idefics, PaliGemma, Qwen-VL, SmolVLM
-- [ ] Audio: Whisper, Wav2Vec 2.0, HuBERT
+### **0.13 Configuration, generation, architectures**
+- `AutoConfig` and `from_pretrained()` with `device_map="auto"` and `dtype="auto"`
+- `save_pretrained()`, `push_to_hub()`, model cards
+- Loading community kernels through `attn_implementation`
+- `model.generate()`, `max_new_tokens`, greedy, beam search, sampling, temperature, top-k, top-p, repetition penalty, length penalty, constrained generation
+- Streaming with `TextStreamer` and `TextIteratorStreamer`
+- `GenerationConfig` for reusable settings
+- Encoder-only: BERT, RoBERTa, DistilBERT, ALBERT, DeBERTa, XLM-RoBERTa
+- Decoder-only: GPT-2, Llama, Mistral, Qwen, Gemma, Phi, Falcon
+- Seq2seq: T5/Flan-T5, BART, Pegasus, mT5, MarianMT
+- Vision: ViT, DeiT, Swin, DINOv2, CLIP, SigLIP
+- Multimodal: LLaVA, Idefics, PaliGemma, Qwen-VL, SmolVLM
+- Audio: Whisper, Wav2Vec 2.0, HuBERT
 
----
 
-### **Pipeline, and what to do when the task is gone**
+### **0.14 Pipeline, and what to do when the task is gone**
 ```python
 from transformers import pipeline
 from transformers.pipelines import get_supported_tasks
@@ -585,7 +587,7 @@ classifier = pipeline("text-classification")
 ner        = pipeline("token-classification", aggregation_strategy="simple")
 embedder   = pipeline("feature-extraction")
 
-# summarization pipeline no longer exists in v5
+# summarization pipeline is no longer available
 chat = pipeline("text-generation", model="Qwen/Qwen3-4B-Instruct-2507")
 out = chat([{"role": "user", "content": "Summarize in one sentence: " + text}],
            max_new_tokens=100)
@@ -600,7 +602,7 @@ ids = model.generate(**tok("summarize: " + text, return_tensors="pt", truncation
 print(tok.decode(ids[0], skip_special_tokens=True))
 ```
 
-### **Trainer with a custom metric**
+### **0.15 Trainer with a custom metric**
 ```python
 import numpy as np
 import evaluate
@@ -648,7 +650,7 @@ trainer.save_model("./my-model")
 trainer.push_to_hub("username/my-model")
 ```
 
-### **Generation controls**
+### **0.16 Generation controls**
 ```python
 from transformers import GenerationConfig, TextStreamer
 
@@ -663,7 +665,7 @@ model.generate(**inputs, generation_config=cfg)
 model.generate(**inputs, max_new_tokens=100, streamer=TextStreamer(tokenizer))
 ```
 
-### **Tokenizer deep dive**
+### **0.17 Tokenizer deep dive**
 ```python
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
@@ -683,7 +685,7 @@ fast = PreTrainedTokenizerFast(tokenizer_object=tok, unk_token="[UNK]", pad_toke
 fast.save_pretrained("./my-tokenizer")
 ```
 
-### **Evaluation, three ways**
+### **0.18 Evaluation, three ways**
 ```python
 import evaluate
 
@@ -694,7 +696,7 @@ print(evaluate.list_evaluation_modules()[:5])
 ```
 
 ```bash
-# lm-eval: standard benchmarks, CLI subcommands since 0.4.10
+# lm-eval: standard benchmark tasks
 lm-eval run --model hf --model_args pretrained=Qwen/Qwen3-4B-Instruct-2507,dtype=bfloat16 --tasks hellaswag
 lm-eval run --model vllm --model_args pretrained=./my-model --tasks ifeval
 lm-eval ls tasks
@@ -705,7 +707,7 @@ lm-eval ls tasks
 # see https://github.com/huggingface/lighteval for the current task and backend names
 ```
 
-### **Decontamination, the way the harness actually implements it**
+### **0.19 Decontamination, the way the harness actually implements it**
 ```bash
 # 1. Generate n-gram files + info.json for your training set
 python scripts/pile_ngram_generation/build_ngrams.py --train-data ./train.jsonl \
@@ -716,69 +718,65 @@ lm-eval run --model hf --model_args pretrained=./my-model \
   --tasks mmlu --decontamination_ngrams_path ./ngrams
 ```
 
-The harness marks contaminated documents and reports a second metric with a `decontaminate` suffix. New tasks are **not** decontaminated by default: a task must override `should_decontaminate` and `doc_to_decontamination_query`. There is no `decontaminate(train_dataset=..., eval_datasets=[...], ngram_size=8)` function — that API never existed, and code written against it will fail on import.
+The harness marks contaminated documents and reports a second metric with a `decontaminate` suffix. New tasks are **not** decontaminated by default: a task must override `should_decontaminate` and `doc_to_decontamination_query`. There is no `decontaminate(train_dataset=..., eval_datasets=[...], ngram_size=8)` function, that API never existed, and code written against it will fail on import.
 
----
 
-### **Lab 1-1 — Pipeline inventory**
+### **0.20 Lab 1-1: Pipeline inventory**
 - Print `get_supported_tasks()` and diff it against the checklist above.
 - Run one pipeline per modality (text, vision, audio, multimodal).
 - Replace a removed pipeline two ways: chat model and seq2seq `generate()`.
 
-### **Lab 1-2 — Trainer fine-tune on IMDB**
+### **0.21 Lab 1-2: Trainer fine-tune on IMDB**
 - Fine-tune DistilBERT for sentiment with `Trainer`.
 - Record loss curve, eval accuracy, training wall time, peak memory.
 - Push the model and the tokenizer to the Hub with a model card.
 - Re-load it in a fresh process with `pipeline("sentiment-analysis", model=...)`.
 
-### **Lab 1-3 — Tokenizer forensics**
+### **0.22 Lab 1-3: Tokenizer forensics**
 - Tokenize a multilingual sample; explain each subword split.
 - Map tokens back to characters with `offset_mapping` and `word_ids()`.
 - Build a NER alignment by hand for three sentences.
 - Train a 30k-vocab BPE tokenizer and wrap it with `PreTrainedTokenizerFast`.
 
-### **Lab 1-4 — Generation sweep**
+### **0.23 Lab 1-4: Generation sweep**
 - Compare greedy, beam, temperature, top-k, top-p on the same prompt.
 - Measure tokens/sec and output length.
 - Stream with `TextStreamer` and with `TextIteratorStreamer`.
 
-### **Lab 1-5 — Three eval harnesses on one model**
+### **0.24 Lab 1-5: Three eval harnesses on one model**
 - Score the same checkpoint with `evaluate`, `lm-eval`, and `lighteval`.
 - Record which tasks each harness supports and what the output format is.
 - Run a decontamination pass and report how many eval documents were flagged.
 
----
 
-## **Pitfalls**
-- **`torch_dtype` → `dtype`.** The old argument name warns or errors in v5.
+### **0.25 Pitfalls**
+- **`torch_dtype` → `dtype`.** The old argument name warns or errors in the current release.
 - **`Trainer(tokenizer=...)` → `processing_class=...`.** Passing the old argument raises a deprecation error.
 - **`encode_plus()` is gone.** Call the tokenizer directly.
 - **Removed pipelines fail with `KeyError`, not a helpful message.** Check `get_supported_tasks()` first.
 - **`ds["col"]` is lazy.** `list(ds["col"])` materializes it; for a large column this is where your RAM goes.
 - **`hf eval` / lighteval are not interchangeable with `evaluate`.** A metric that exists in one may be missing in another; check `evaluate.list_evaluation_modules()` and the harness task list.
-- **lighteval has had no release since 0.13.0 (Nov 2025).** Pin it, and read the source for new entry points rather than trusting blog posts.
+- `lighteval` entry points can change. Check the project documentation or source when configuring a new backend.
 - **`lighteval` and `lm-eval` have different task names.** Copy-pasting a task name from one into the other silently evaluates nothing.
 
----
 
-## **Acceptance gate**
-- [ ] Every task class in the pipeline inventory has been run at least once.
-- [ ] A `Trainer` fine-tune completed and was pushed to the Hub with a card.
-- [ ] The pushed model reloads in a fresh process and produces the same output as the local copy.
-- [ ] A tokenizer was trained from scratch and round-tripped through `PreTrainedTokenizerFast`.
-- [ ] One metric was computed with `evaluate`, one benchmark with `lm-eval`, and one with `lighteval`, with the outputs compared.
-- [ ] A decontamination run was executed against a benchmark and the flagged-document count recorded.
+### **0.26 Acceptance gate**
+- Every task class in the pipeline inventory has been run at least once.
+- A `Trainer` fine-tune completed and was pushed to the Hub with a card.
+- The pushed model reloads in a fresh process and produces the same output as the local copy.
+- A tokenizer was trained from scratch and round-tripped through `PreTrainedTokenizerFast`.
+- One metric was computed with `evaluate`, one benchmark with `lm-eval`, and one with `lighteval`, with the outputs compared.
+- A decontamination run was executed against a benchmark and the flagged-document count recorded.
 
----
 
-## **Resources**
-- Transformers v5.22.1 release — https://github.com/huggingface/transformers/releases/tag/v5.22.1
-- transformers on PyPI — https://pypi.org/project/transformers/
-- tokenizers on PyPI — https://pypi.org/project/tokenizers/
-- Evaluate v0.4.6 — https://github.com/huggingface/evaluate/releases/tag/v0.4.6
-- LightEval v0.13.0 — https://github.com/huggingface/lighteval/releases/tag/v0.13.0
-- lm-evaluation-harness v0.4.13 — https://github.com/EleutherAI/lm-evaluation-harness/releases/tag/v0.4.13
-- lm-eval decontamination guide — https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/decontamination.md
-- lm-eval CLI interface — https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/interface.md
+### **0.27 Resources**
+- Transformers releases: https://github.com/huggingface/transformers/releases
+- transformers on PyPI, https://pypi.org/project/transformers/
+- tokenizers on PyPI: https://pypi.org/project/tokenizers/
+- Evaluate project: https://github.com/huggingface/evaluate
+- LightEval project: https://github.com/huggingface/lighteval
+- lm-evaluation-harness: https://github.com/EleutherAI/lm-evaluation-harness
+- lm-eval decontamination guide: https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/decontamination.md
+- lm-eval CLI interface: https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/interface.md
 
-**Next:** Stage 03 — Data Engineering.
+**Next:** Stage 03, Data Engineering.
