@@ -1,10 +1,9 @@
-# Stage 10 — Production Serving
+# **Stage 10 — Production Serving**
 
-**Weeks:** 29–30
 **Stack:** vLLM 0.33.0 · SGLang 0.5.23 · TensorRT-LLM 1.2.1 · GPTQModel 7.8.0 · llm-compressor 0.15.0 · llama.cpp / GGUF · Ollama 0.19+ · MLX-LM 0.32.2 · HF Spaces / Jobs / ZeroGPU · Tinker 0.37.0
 **Outcome:** a served model with a deployment decision you can defend, a quantization path that is still supported, and a benchmark table.
 
-## The deployment decision
+## **The deployment decision**
 
 ```
 Trained LoRA adapter
@@ -29,8 +28,8 @@ merged = model.merge_and_unload()
 merged.save_pretrained("./outputs/llama3-alpaca-merged")
 ```
 
-> [!warning] The source notes' AWQ code no longer works
-> `from awq import AutoAWQForCausalLM` is dead: **AutoAWQ is officially deprecated** (last validated against torch 2.6 / transformers 4.51.3) and **AutoGPTQ is unmaintained**. The live path is **GPTQModel 7.8.0** for GPTQ/AWQ work, or **llm-compressor 0.15.0** — vLLM's own recommendation for AWQ and FP8 W8A8 quantization, since the AWQ functionality moved out of vLLM into llm-compressor [14][60].
+The source notes' AWQ code no longer works
+`from awq import AutoAWQForCausalLM` is dead: **AutoAWQ is officially deprecated** (last validated against torch 2.6 / transformers 4.51.3) and **AutoGPTQ is unmaintained**. The live path is **GPTQModel 7.8.0** for GPTQ/AWQ work, or **llm-compressor 0.15.0** — vLLM's own recommendation for AWQ and FP8 W8A8 quantization, since the AWQ functionality moved out of vLLM into llm-compressor [14][60].
 
 **Quantize for a datacenter GPU**
 ```bash
@@ -99,7 +98,7 @@ python -m sglang.launch_server \
 - **MLX-LM 0.32.2** — LoRA, QLoRA, DoRA, and full fine-tuning on Apple Silicon, which makes a Mac Studio a legitimate fine-tuning box for a 70B QLoRA [44].
 - **4-bit QAT checkpoints** — NVFP4 W4A16 builds for Hopper and Blackwell, and native Q4_0 GGUF builds for llama.cpp and Ollama, are published for Qwen3.5-4B, Qwen3.8-27B, and Gemma 4 E4B/12B; the Gemma E4B Q4_0 build reports 2× lower KL against the unquantized model than Google's own QAT, and the NVFP4 build reports +35% output throughput over BF16 on H100 [66].
 
-## Compute options when you have no GPU
+## **Compute options when you have no GPU**
 
 Cost and VRAM per option, for a 7B–13B QLoRA and for a served endpoint.
 
@@ -118,7 +117,7 @@ Cost and VRAM per option, for a 7B–13B QLoRA and for a served endpoint.
 
 Notes worth knowing: H100 is **no longer available in Spaces** (removed December 2025) but is available as a GPU Instance [46]. ZeroGPU does not support `torch.compile`, though ahead-of-time compilation works with torch ≥2.8. Free personal accounts can host two ZeroGPU Spaces; PRO ($9/month) raises that to ten and multiplies the daily quota by eight [45][47]. Spaces hardware can also be set programmatically through `huggingface_hub`.
 
-## Evaluation gates for a served model
+## **Evaluation gates for a served model**
 
 The source notes accepted "DPO improves MT-Bench by ≥5%" as a capstone criterion. MT-Bench is saturated and effectively unmaintained, and score differences of 0.1–0.2 on it are noise. Replace it with a panel that measures distinct failure modes:
 
@@ -131,7 +130,7 @@ The source notes accepted "DPO improves MT-Bench by ≥5%" as a capstone criteri
 | Capability regression (MMLU, GSM8K, HumanEval) | Catastrophic forgetting | Report the delta, not the absolute |
 | Format compliance | Reward hacking in GRPO | Should be ≥95% |
 
-## Serving engines
+## **Serving engines**
 
 | Engine | Best workload | Core idea | Status |
 |---|---|---|---|
@@ -149,7 +148,7 @@ llama.cpp and Ollama are local runtimes, not fine-tuning tools and not part of t
 
 **SGLang core concepts:** RadixAttention (trie-based prefix caching), EAGLE3 and DART integrated, FlashInfer backend.
 
-## The KV cache, measured
+## **The KV cache, measured**
 
 ```
 KV Cache bytes = 2 × n_layers × n_kv_heads × d_head × dtype_bytes × seq_len
@@ -173,7 +172,7 @@ Everything below exists because that formula, applied to a long-context request,
 | **PD separation** | Prefill and decode own separate KV pools | Large-scale standard [108] |
 | **Architectural compression** | MLA, CSA, HCA | Built into DeepSeek V3/V4 and Qwen hybrid stacks |
 
-### The full KV stack, in the order you should apply it
+### **The full KV stack, in the order you should apply it**
 
 ```
 Layer 1: PagedAttention / blocked KV         — required baseline
@@ -186,7 +185,7 @@ Layer 6: PD separation                        — large-scale; KVTC reduces tran
 Layer 7: Architectural (MLA / CSA / HCA)      — built into the model, not optional
 ```
 
-### TurboQuant, as it actually ships
+### **TurboQuant, as it actually ships**
 
 TurboQuant (arXiv 2504.19874) is an online vector quantisation method for the KV cache: roughly 3.5 bits per value, training-free, data-oblivious, and within `sqrt(3π/2) ≈ 2.7×` of the Shannon lower bound on distortion [91].
 
@@ -205,7 +204,7 @@ This is the correction that matters most in this refresh. The source document's 
 
 If you want the paper's exact algorithm rather than the shipped approximation, implement it yourself — the OSS implementations from the source document (`0xSero/turboquant`, `hackimov/turboquant-kv`, `Alberto-Codes/turboquant-vllm`) predate the upstream merge and still exist, but the source's advice to run with `--enforce-eager` until a patch lands is now obsolete: upstream ships a native backend rather than a monkey-patch, so `torch.compile` no longer bypasses it.
 
-### KVTC, and when it beats TurboQuant
+### **KVTC, and when it beats TurboQuant**
 
 KVTC (arXiv 2511.01815, accepted ICLR 2026) applies JPEG-style transform coding to the KV cache:
 
@@ -239,7 +238,7 @@ KVTC:       maximum compression; multi-turn reuse; PD separation;
 
 The KVTC paper reports up to 20× compression while preserving reasoning and long-context accuracy, with 40×+ in specific cases. It remains a research reference implementation rather than a first-class vLLM feature, so plan on engineering effort if you deploy it [92].
 
-## Prefill and decode
+## **Prefill and decode**
 
 ```
 PREFILL PHASE                        DECODE PHASE
@@ -260,7 +259,7 @@ Optimizations:                       Optimizations:
 
 **Continuous batching** schedules at iteration level: a finished request exits immediately and a new one enters. Near-zero GPU idle time, and 3–10× the throughput of static batching.
 
-## Speculative decoding
+## **Speculative decoding**
 
 A draft model proposes K tokens; the target verifies all K in one pass. It is mathematically lossless — the output distribution is unchanged — so the only question is whether the acceptance rate is worth the draft cost.
 
@@ -276,7 +275,7 @@ DART (arXiv 2601.19278, 27 January 2026) generates all K draft tokens in paralle
 
 Two operational rules. **Fine-tuned targets need their draft head retrained** — a generic EAGLE3 head has a materially lower acceptance rate against an adapter-tuned model. And speculative decoding **hurts** when the batch is larger than 32, when outputs are shorter than 100 tokens, or when the acceptance rate falls below 50%.
 
-## Prefill/decode disaggregation
+## **Prefill/decode disaggregation**
 
 ```
 Prefill instances (H100/A100):    Decode instances (A10G/L4):
@@ -306,7 +305,7 @@ The connector choice is a fabric decision as much as a software one: NIXL for si
 
 Measure the transfer before you benchmark anything else. If decode's `KV Transfer metrics` line shows an average transfer time in the hundreds of milliseconds, fix the fabric — the number lands on TTFT and caps throughput, and a misconfigured network usually slows collectives too.
 
-## Quantization in production
+## **Quantization in production**
 
 ```
 Interactive chat (latency-sensitive):
@@ -334,7 +333,7 @@ Multi-turn / agentic (long history):
 
 Mistral Large 4, as a concrete reference for a frontier open-weight model at serving time: GGUF builds run from UD-IQ1_S at 233 GB through UD-IQ1_M at 260 GB to BF16 at 2.1 TB, with FP8 and NVFP4 variants for Blackwell; vLLM is the recommended engine [67].
 
-## Serving pre-flight checklist (November 2026)
+## **Serving pre-flight checklist (November 2026)**
 
 - [ ] The engine is vLLM or SGLang. TGI is archived and is never the answer for a new deployment.
 - [ ] `transformers` in the serving environment satisfies the engine's constraint (`>=5.16.1,<5.20.0` for vLLM 0.32.0+).
@@ -347,7 +346,7 @@ Mistral Large 4, as a concrete reference for a frontier open-weight model at ser
 - [ ] TTFT, TPOT and throughput are measured at the target concurrency and reported.
 - [ ] The adapter used for training is the one being served — same hash, same base model revision.
 
-## Serving pre-flight checklist
+## **Serving pre-flight checklist**
 
 - [ ] Merged or multi-LoRA? Can you state the cost and latency trade-off?
 - [ ] Does `--max-lora-rank` cover the rank of your adapter? Is `--max-loras` above 1?
@@ -361,16 +360,16 @@ Mistral Large 4, as a concrete reference for a frontier open-weight model at ser
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 A fine-tune that cannot be served is a notebook. Stage 7 covers the decisions that separate a demo from a service: merged or multi-LoRA, which quantization format, which engine, which hardware, and what the latency and throughput actually are.
 
 **Exit criterion:** a served endpoint with a documented deployment decision, a benchmark table (TTFT, TPOT, throughput at batch 1/8/32), and a documented quality delta from quantization.
 
 ---
 
-## The deployment decision
+## **The deployment decision**
 ```
 Trained LoRA adapter
    |
@@ -392,7 +391,7 @@ Trained LoRA adapter
 
 ---
 
-## Topic checklist — vLLM 0.33.0
+## **Topic checklist — vLLM 0.33.0**
 - [ ] `--enable-lora` — enable adapter handling
 - [ ] `--lora-modules` — `name=path` pairs or a JSON list
 - [ ] `--max-loras` — maximum LoRAs in a batch; **default 1**
@@ -406,14 +405,14 @@ Trained LoRA adapter
 - [ ] `--tensor-parallel-size`, `--dtype`, `--max-model-len`
 - [ ] TTFT and TPOT measurement, not just requests per second
 
-## Topic checklist — SGLang 0.5.23
+## **Topic checklist — SGLang 0.5.23**
 - [ ] `--lora-paths` — one or more adapter directories
 - [ ] `--max-loras-per-batch` — default 8, including the base model
 - [ ] `--max-loaded-loras` — how many stay resident
 - [ ] `--lora-backend` — `csgmv` by default, reporting a 20–80% latency improvement on multi-adapter workloads
 - [ ] Continuous batching and radix-prefix caching behavior under your traffic pattern
 
-## Topic checklist — quantization
+## **Topic checklist — quantization**
 - [ ] Why AutoGPTQ is unmaintained and AutoAWQ is deprecated
 - [ ] GPTQModel for GPTQ and AWQ work
 - [ ] llm-compressor for AWQ and FP8 W8A8 — vLLM's own recommendation
@@ -424,13 +423,13 @@ Trained LoRA adapter
 - [ ] FP8 on Hopper and Blackwell
 - [ ] Measuring the quality delta on your own domain eval
 
-## Topic checklist — edge runtimes
+## **Topic checklist — edge runtimes**
 - [ ] llama.cpp with GGUF (CPU, Metal, CUDA)
 - [ ] Ollama 0.19+ with the MLX backend on Apple Silicon
 - [ ] MLX-LM 0.32.2: LoRA, QLoRA, DoRA, and full fine-tuning on Apple Silicon
 - [ ] Quantized 4-bit QAT GGUF builds for phone and laptop deployment
 
-## Topic checklist — compute
+## **Topic checklist — compute**
 - [ ] HF Spaces hardware tiers and hourly prices
 - [ ] HF GPU Instances (H100, H200, B200) and the fact that H100 is no longer offered in Spaces
 - [ ] HF ZeroGPU quotas, tiers, and the `large` / `xlarge` slice sizes
@@ -439,7 +438,7 @@ Trained LoRA adapter
 
 ---
 
-### Merge the adapter
+### **Merge the adapter**
 ```python
 from peft import PeftModel
 from transformers import AutoModelForCausalLM
@@ -450,7 +449,7 @@ merged = model.merge_and_unload()
 merged.save_pretrained("./outputs/merged-model")
 ```
 
-### Quantize for a datacenter GPU
+### **Quantize for a datacenter GPU**
 ```bash
 # INT4 (GPTQ) and AWQ
 pip install -U gptqmodel
@@ -475,13 +474,13 @@ oneshot(
 )
 ```
 
-### Quantize for edge
+### **Quantize for edge**
 ```bash
 python convert_hf_to_gguf.py ./outputs/merged-model --outfile model.gguf
 ./llama-quantize model.gguf model-q4_k_m.gguf Q4_K_M
 ```
 
-### Serve — vLLM, merged
+### **Serve — vLLM, merged**
 ```bash
 vllm serve ./outputs/merged-awq \
   --tensor-parallel-size 1 \
@@ -489,7 +488,7 @@ vllm serve ./outputs/merged-awq \
   --max-model-len 4096
 ```
 
-### Serve — vLLM, multi-LoRA
+### **Serve — vLLM, multi-LoRA**
 ```bash
 vllm serve Qwen/Qwen3-4B-Instruct-2507 \
   --enable-lora \
@@ -505,10 +504,10 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"model": "lora1", "messages": [{"role": "user", "content": "Summarize this ticket"}]}'
 ```
 
-> [!warning] The default that will silently serialize you
-> `--max-loras` defaults to **1**. With multiple adapters in a request stream and the default in place, requests queue instead of running concurrently. Set it to your real concurrency target, and set `--max-lora-rank` to at least the `r` of your adapter (allowed values 1, 8, 16, 32, 64, 128, 256, 320, 512). If your adapter was trained at `r=32` and the server is left at the default 16, the request fails or the adapter is silently downgraded — read the server log rather than assuming.
+The default that will silently serialize you
+`--max-loras` defaults to **1**. With multiple adapters in a request stream and the default in place, requests queue instead of running concurrently. Set it to your real concurrency target, and set `--max-lora-rank` to at least the `r` of your adapter (allowed values 1, 8, 16, 32, 64, 128, 256, 320, 512). If your adapter was trained at `r=32` and the server is left at the default 16, the request fails or the adapter is silently downgraded — read the server log rather than assuming.
 
-### Serve — SGLang
+### **Serve — SGLang**
 ```bash
 python -m sglang.launch_server \
   --model-path Qwen/Qwen3-4B-Instruct-2507 \
@@ -518,7 +517,7 @@ python -m sglang.launch_server \
   --lora-backend csgmv
 ```
 
-### Benchmark harness
+### **Benchmark harness**
 ```python
 import time, statistics
 from openai import OpenAI
@@ -558,7 +557,7 @@ for batch_size in (1, 8, 32):
 
 ---
 
-## Compute options
+## **Compute options**
 | Option | Cost | Shape |
 |---|---|---|
 | HF Spaces, T4 small | $0.40/h, 16 GB | Small QLoRA runs, demos |
@@ -580,7 +579,7 @@ for batch_size in (1, 8, 32):
 
 ---
 
-## Evaluation gates
+## **Evaluation gates**
 MT-Bench is saturated and effectively unmaintained, and score differences of 0.1–0.2 on it are noise. Gate on a panel instead:
 
 | Gate | What it catches | Why |
@@ -594,34 +593,34 @@ MT-Bench is saturated and effectively unmaintained, and score differences of 0.1
 
 ---
 
-### Lab 7-1 — Merged versus multi-LoRA (1–2 days)
+### **Lab 7-1 — Merged versus multi-LoRA**
 - Serve the merged model and the multi-LoRA server on identical hardware.
 - Measure TTFT p50/p95/p99, TPOT, throughput at batch 1/8/32, and VRAM.
 - Write the decision rule for your workload: how many adapters, how much traffic, what latency budget.
 
-### Lab 7-2 — Quantization sweep (1–2 days)
+### **Lab 7-2 — Quantization sweep**
 - Quantize the merged model to INT4, FP8 (if on Hopper/Blackwell), and GGUF Q4_K_M.
 - Measure the domain-eval delta for each, and the throughput and memory changes.
 - Report the Pareto frontier, not just the best point.
 
-### Lab 7-3 — Adapter rank and batch limits (0.5 day)
+### **Lab 7-3 — Adapter rank and batch limits**
 - Train adapters at `r` = 8, 16, 32.
 - Serve with `--max-lora-rank` set below the adapter rank and observe the failure.
 - Find the `--max-loras` setting where latency starts to degrade under concurrent adapters.
 
-### Lab 7-4 — Edge deployment (1 day)
+### **Lab 7-4 — Edge deployment**
 - Convert to GGUF and serve with llama.cpp and with Ollama.
 - Measure tokens/sec on a laptop and, if possible, on a phone.
 - Test the MLX path on Apple Silicon if you have one.
 
-### Lab 7-5 — Budget run on free compute (1–2 days)
+### **Lab 7-5 — Budget run on free compute**
 - Run a training job on HF Jobs and an inference demo on ZeroGPU.
 - Track wall time, quota consumption, and how long it takes to set up.
 - Write down what you would and would not do on this tier.
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **`--max-loras` defaults to 1.** Multi-tenant serving without raising it serializes your requests.
 - **`--max-lora-rank` defaults to 16.** An adapter trained at a higher rank will not serve until you raise it, and the failure message is not obvious.
 - **AutoAWQ and AutoGPTQ are finished.** `from awq import AutoAWQForCausalLM` is the old path; use GPTQModel or llm-compressor.
@@ -634,7 +633,7 @@ MT-Bench is saturated and effectively unmaintained, and score differences of 0.1
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] A deployment decision (merged or multi-LoRA) written with its cost, latency, and memory trade-off.
 - [ ] Benchmark table complete: TTFT p50/p95/p99, TPOT p50/p95/p99, throughput at batch 1/8/32, for base, FT-FP16, and FT-quantized.
 - [ ] Quantization quality delta measured on the domain eval and stated as a budget.
@@ -644,7 +643,7 @@ MT-Bench is saturated and effectively unmaintained, and score differences of 0.1
 
 ---
 
-## Resources
+## **Resources**
 - vLLM v0.33.0 — https://github.com/vllm-project/vllm/releases/tag/v0.33.0
 - vLLM `serve` CLI (LoRA flags) — https://docs.vllm.ai/en/latest/cli/serve/
 - vLLM engine arguments — https://docs.vllm.ai/en/latest/configuration/engine_args/

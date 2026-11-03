@@ -1,4 +1,4 @@
-# Research and Version Audit (November 2026) — Model Refresh
+# **Research and Version Audit (November 2026) — Model Refresh**
 
 Companion audit for **00 - Master Roadmap (Merged and Model-Refreshed, Nov 2026)**. Every factual claim in the master that depends on a library release, a model release, a licence term, a benchmark number, or a technical paper is listed here with its source and the date it was verified.
 
@@ -11,7 +11,7 @@ Companion audit for **00 - Master Roadmap (Merged and Model-Refreshed, Nov 2026)
 | Reference list | 130 entries, continuous 1–130, every entry cited at least once, no duplicate URLs |
 | Unresolved items | 4 (listed in the final section, each carried with a stated reason) |
 
-## Method
+## **Method**
 
 Three passes, in this order.
 
@@ -21,7 +21,7 @@ Three passes, in this order.
 
 Where a source asserted a number that no primary surface supports, the number was removed rather than softened, and the removal is recorded. Where a source asserted a number that a primary surface supports but with different conditions (a different hardware target, a different preset), the conditions were attached rather than the number being dropped.
 
-## Source coverage matrix
+## **Source coverage matrix**
 
 The eight sources and where their content lives in the canonical set.
 
@@ -38,11 +38,11 @@ The eight sources and where their content lives in the canonical set.
 
 Coverage was re-verified mechanically after the rebuild: 231 named identifiers from S8 (architectures, algorithms, flags, function names, model families, benchmarks, tools) and 79 identifiers from S1–S7 were checked against the canonical set. All are present. The only two initially absent — `Falcon TII` and `vllm_lora` — were restored by the rebuild.
 
-## Correction ledger
+## **Correction ledger**
 
 The master's corrections table carries the 37 corrections in roadmap order. This section records the evidence behind each group of them.
 
-### Group A — library and version pins (corrections 1–12, 36)
+### **Group A — library and version pins (corrections 1–12, 36)**
 
 | Assertion under review | Verdict | Evidence |
 |---|---|---|
@@ -53,7 +53,7 @@ The master's corrections table carries the 37 corrections in roadmap order. This
 | Axolotl requires Python ≥3.12 | New finding | PyPI metadata `requires_python >=3.12` — breaks the shared 3.11 base environment |
 | vLLM 0.33.0 requires `transformers>=5.16.1,<5.20.0` | New finding | vLLM v0.32.0 release notes; creates a hard conflict with the training-side `transformers 5.22.1` pin |
 
-### Group B — model landscape (corrections 13–17, 25, 28–33, 37)
+### **Group B — model landscape (corrections 13–17, 25, 28–33, 37)**
 
 | Model family | Verified state, 3 November 2026 | Source |
 |---|---|---|
@@ -75,7 +75,7 @@ The master's corrections table carries the 37 corrections in roadmap order. This
 | MiniMax M3.1 Flash | Released 19 Oct 2026 | Release notes |
 | LongCat-2.5 | Released 2 Nov 2026 | Release notes |
 
-### Group C — technique claims (corrections 18–27)
+### **Group C — technique claims (corrections 18–27)**
 
 | Assertion under review | Verdict | Evidence |
 |---|---|---|
@@ -95,14 +95,14 @@ The master's corrections table carries the 37 corrections in roadmap order. This
 | "Qwen3-TTS-Tokenizer-12Hz is proprietary" | **Wrong** | The tokenizer is published openly on the Hub alongside the Base models under Apache-2.0 [73] |
 | "TGI health checks pass for current models" | **Wrong** | Models released after the 21 March 2026 archive fail TGI health checks [115] |
 
-### Group D — retrieval and benchmark numbers (correction 29)
+### **Group D — retrieval and benchmark numbers (correction 29)**
 
 | Claim | Verified value | Source |
 |---|---|---|
 | "Alibaba-NLP/gte-Qwen2-7B — Top MTEB 2026" | Stale. MTEB's model space lists `nvidia/Nemotron-3.5-Embed-8B-BF16` (8.4B params, 4,096 dims, 32,768 max tokens, Sentence-Transformers compatible) at ViDoRe v3.1 61.17 nDCG@10, first among dense retrieval models as of 20 Oct 2026, and `nvidia/Nemotron-3-Embed-8B-BF16` at RTEB-16 78.46, multilingual leader as of 16 Jul 2026. Nemotron 3.5 Rerank 8B reaches 60.49 on the combined image+text task against 59.17 for Qwen3-VL-Reranker-8B | [41][89][90] |
 | Ranking stability | Rankings move monthly. Every number in the master carries its date, and the Stage 1 pre-flight requires saving a dated snapshot before a decision | [41] |
 
-### Group E — licence audit (correction 31)
+### **Group E — licence audit (correction 31)**
 
 | Licence | Verified terms | Source |
 |---|---|---|
@@ -114,7 +114,7 @@ The master's corrections table carries the 37 corrections in roadmap order. This
 | LFM Open License v1.0 | Commercial use only below US$10M annual revenue; qualified non-profits exempt for non-commercial and research use; internal research, testing and evaluation permitted; threshold also applies per downstream customer | [125] |
 | Meta Custom (Llama 4) | 700M monthly-active-user clause | [85] |
 
-### Group F — job-market signal (Stage 11)
+### **Group F — job-market signal (Stage 11)**
 
 | Item | Verified state, 3 November 2026 | Source |
 |---|---|---|
@@ -122,7 +122,7 @@ The master's corrections table carries the 37 corrections in roadmap order. This
 | Anthropic current research board | Lists Pre-training, Post-Training Model Evaluations, and Staff Research Engineer, Multi-Agent Scaling | [126] |
 | Anthropic "Research Engineer, Universes" | Live; builds training environments for long-horizon agentic tasks; names RL environment design, simulation systems, large-scale ML infrastructure, sandboxing, containerisation, VM infrastructure and distributed systems | [128] |
 
-## Version ledger verification commands
+## **Version ledger verification commands**
 
 Every version in the master's ledger can be re-checked with these, and each was run on 3 November 2026:
 
@@ -150,7 +150,7 @@ curl -s "https://huggingface.co/api/models?author=moonshotai"
 curl -s https://huggingface.co/api/models/meta-models/Muse-Spark-Open-816B-A42B-NVFP4
 ```
 
-## Coverage checks run against the rebuilt set
+## **Coverage checks run against the rebuilt set**
 
 | Check | Method | Result |
 |---|---|---|
@@ -162,7 +162,7 @@ curl -s https://huggingface.co/api/models/meta-models/Muse-Spark-Open-816B-A42B-
 | Source identifier coverage | 231 identifiers from S8 and 79 from S1–S7 checked against the canonical set | All present |
 | Stale model pick scan | Search for superseded model IDs | Remaining occurrences are historical or contrast references inside the May 2026 snapshot table and the correction ledger, each explicitly labelled as superseded |
 
-## Items carried forward unresolved
+## **Items carried forward unresolved**
 
 Four assertions could not be confirmed against a primary surface and are therefore marked as pointers rather than facts in the master.
 
@@ -171,7 +171,7 @@ Four assertions could not be confirmed against a primary surface and are therefo
 3. **Kimi K3.1 Pro BrowseComp 60.6 → 78.4** — attributed to the orchestrator/sub-agent pattern. Vendor-reported; no independent reproduction found. Stated as vendor-reported in the master.
 4. **Muse Glimmer 30B specification** — the repository is confirmed on the Hub under `meta-models`, but a primary model card with parameters and licence terms was not opened. The master lists it with the Hub reference and no capability claims.
 
-## Pointer notes not present in this merge
+## **Pointer notes not present in this merge**
 
 The source files cross-link to notes that were not provided. They remain pointers; nothing was invented for them.
 
@@ -180,7 +180,7 @@ The source files cross-link to notes that were not provided. They remain pointer
 - `targets/ai-engineering-role-taxonomy`
 - `targets/anthropic-agents`
 
-## Reference list
+## **Reference list**
 
 The master carries the full 130-entry reference list. Entries 1–66 are the library, framework and policy citations inherited from the first merge; entries 67–130 are the model, licence, paper, engine and job-market citations added by this refresh.
 

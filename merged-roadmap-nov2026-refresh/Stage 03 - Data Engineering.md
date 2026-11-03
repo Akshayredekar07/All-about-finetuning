@@ -1,12 +1,11 @@
-# Stage 03 — Data Engineering
+# **Stage 03 — Data Engineering**
 
-**Weeks:** 12 and 14–15
 **Libraries:** `datasets` 5.1.0 · `datasketch` · `transformers` tokenizers · `presidio` (PII) · `distilabel` (synthetic)
 **Outcome:** a dataset you can defend — sourced, licensed, deduplicated, decontaminated, format-checked, versioned, and documented.
 
 **Why this stage exists at all:** the sources' own verdict was "a bad dataset will defeat a perfect training loop every time" and "data > algorithm, every time". Every later stage (training, alignment, evaluation, compliance) consumes this stage's output, so it sits before training rather than beside it.
 
-## Data shapes
+## **Data shapes**
 
 Match the data shape to the method before you choose a method.
 
@@ -20,7 +19,7 @@ Match the data shape to the method before you choose a method.
 | Verifiable-reward tasks | GRPO, RLVR | `{prompt, verifiable_check_fn}` | MATH, GSM8K, HumanEval, MBPP |
 | Distillation | Teacher → student | Same as SFT, plus teacher logits | Teacher model outputs |
 
-## Format specifications
+## **Format specifications**
 
 The shape determines the columns, and the columns determine which trainer can consume your data without conversion.
 
@@ -91,8 +90,8 @@ The standard for agent / function-calling fine-tunes. The model learns to call t
 }
 ```
 
-> [!tip] The hard-negative rule
-> The most useful preference pairs are where chosen and rejected are almost equally good. If chosen is obviously better, the model learns nothing. If they are close, the model has to learn the preference.
+The hard-negative rule
+The most useful preference pairs are where chosen and rejected are almost equally good. If chosen is obviously better, the model learns nothing. If they are close, the model has to learn the preference.
 
 **GRPO / RLVR format**
 ```json
@@ -103,7 +102,7 @@ The standard for agent / function-calling fine-tunes. The model learns to call t
 }
 ```
 
-## Public dataset catalog
+## **Public dataset catalog**
 
 SFT
 | Dataset | Size | Domain | Notes |
@@ -150,7 +149,7 @@ Multimodal
 | ALLaVA-4V | 1.4M. 2025. |
 | Cambrian-10M | 10M. The 2025 state-of-the-art visual instruction mix. |
 
-## The five rules
+## **The five rules**
 
 1. **Diversity over volume.** 5K diverse beats 50K near-duplicates.
 2. **Hard negatives.** Preference pairs where chosen and rejected are almost equally good teach more than obvious wins.
@@ -158,7 +157,7 @@ Multimodal
 4. **Format consistency.** Tokenize early to catch chat-template mismatches before you waste ten GPU-hours.
 5. **PII and licensing.** Document provenance. The EU AI Act applies.
 
-## Quality assessment
+## **Quality assessment**
 
 - Read 100 random examples. If the quality is bad in 100, it is bad in 1M.
 - Check the token-length distribution. Long-tail tokens indicate bloat; trim or filter.
@@ -190,7 +189,7 @@ def minhash_dedup(texts, threshold=0.8):
 
 For benchmark contamination specifically, use the harness's own n-gram machinery (`--decontamination_ngrams_path`) rather than a hand-rolled overlap check, so the measurement matches how the evaluation will be scored [53].
 
-## Format consistency check
+## **Format consistency check**
 
 ```python
 from transformers import AutoTokenizer
@@ -216,7 +215,7 @@ tokens = tokenizer(formatted, return_tensors="pt")
 print(f"Token count: {tokens.input_ids.shape[1]}")
 ```
 
-## Synthetic data
+## **Synthetic data**
 
 **When to use:** you do not have enough real data; you need a rare edge case; you need preference pairs at scale (generate candidates with a strong model, rank with a stronger one).
 
@@ -235,7 +234,7 @@ print(f"Token count: {tokens.input_ids.shape[1]}")
 - Hallucinations: synthetic data inherits the generator's errors. Manually verify a sample.
 - Licensing: outputs from a closed model have murky terms. Open-weight generators are safer.
 
-## Licensing and the EU AI Act
+## **Licensing and the EU AI Act**
 
 The Act applies progressively, and the fine-tuning-relevant dates are now concrete [18][19][20]:
 
@@ -278,7 +277,7 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 - For user-generated data, GDPR consent is required. Document the consent flow.
 - For synthetic data there is less PII risk, but verify the generator did not memorize PII from its training data.
 
-## Domain dataset construction
+## **Domain dataset construction**
 
 **Step 1 — Define the task.** "Customer support chatbot" is too vague. "SaaS billing questions, structured JSON output, with citations" is actionable.
 
@@ -292,19 +291,19 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 
 **Step 6 — Version and document.** Tag it (`billing-support-v1.0`), document source, license, size, date, and quality checks performed, and store it in a versioned location (Hub dataset, S3).
 
-## Data labs
+## **Data labs**
 
-**Lab 1 — Inspect a public dataset (0.5 day).** Take `OpenHermes-2.5` or `Tulu-3-SFT-mixture`; read 100 random examples; compute the length distribution; check for duplicates with MinHash; check for MMLU contamination.
+**Lab 1 — Inspect a public dataset.** Take `OpenHermes-2.5` or `Tulu-3-SFT-mixture`; read 100 random examples; compute the length distribution; check for duplicates with MinHash; check for MMLU contamination.
 
-**Lab 2 — Build a small domain dataset (1–2 days).** Pick a domain (for example "explain ML papers"); generate 1K synthetic samples with a strong model; filter by quality; format as ChatML; verify chat-template tokenization; push to the Hub with a data card.
+**Lab 2 — Build a small domain dataset.** Pick a domain (for example "explain ML papers"); generate 1K synthetic samples with a strong model; filter by quality; format as ChatML; verify chat-template tokenization; push to the Hub with a data card.
 
-**Lab 3 — Build a DPO dataset (1–2 days).** Reuse Lab 2's SFT data; generate 2–3 candidate completions per prompt; rank with an LLM judge and a rubric; format as `{prompt, chosen, rejected}`; verify the hard-negative distribution is not all obvious wins.
+**Lab 3 — Build a DPO dataset.** Reuse Lab 2's SFT data; generate 2–3 candidate completions per prompt; rank with an LLM judge and a rubric; format as `{prompt, chosen, rejected}`; verify the hard-negative distribution is not all obvious wins.
 
-**Lab 4 — Decontamination pipeline (1 day).** Take a known-contaminated dataset; run the harness decontamination flow against MMLU, HumanEval, and GSM8K using the n-gram file path; measure how much was stripped; document the result.
+**Lab 4 — Decontamination pipeline.** Take a known-contaminated dataset; run the harness decontamination flow against MMLU, HumanEval, and GSM8K using the n-gram file path; measure how much was stripped; document the result.
 
-**Lab 5 — Format consistency check (0.5 day).** Convert an Alpaca-format dataset to ShareGPT, ChatML, and the Llama-3 chat template; compare token counts; verify the model's chat template handles each format correctly.
+**Lab 5 — Format consistency check.** Convert an Alpaca-format dataset to ShareGPT, ChatML, and the Llama-3 chat template; compare token counts; verify the model's chat template handles each format correctly.
 
-## Data pre-flight checklist
+## **Data pre-flight checklist**
 
 - [ ] Name the three standard SFT formats and when to use each.
 - [ ] What is the DPO preference format? What is the hard-negative rule?
@@ -321,14 +320,14 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 2 sits before training on purpose. A bad dataset defeats a perfect training loop every time; the dominant failure mode of a fine-tune is data, not algorithm. Every later stage consumes this stage's output: Stage 3 trains on it, Stage 4 aligns on it, Stage 8 benchmarks against it and publishes it.
 
 **Exit criterion:** a public domain dataset on the Hub with a data card, a license table, a decontamination report, and a held-out split that no training run ever touched.
 
-## The five rules
+## **The five rules**
 1. **Diversity over volume.** 5K diverse examples beat 50K near-duplicates.
 2. **Hard negatives.** Preference pairs where chosen and rejected are almost equally good teach more than obvious wins.
 3. **Decontamination.** Strip eval-set leakage from training data. Always.
@@ -337,7 +336,7 @@ Stage 2 sits before training on purpose. A bad dataset defeats a perfect trainin
 
 ---
 
-## Data shape table
+## **Data shape table**
 | Data shape | Used for | Columns | Example datasets |
 |---|---|---|---|
 | Instruction-completion | SFT | `instruction`, `input`, `output` | Alpaca, Dolly, OpenHermes, Tulu |
@@ -351,7 +350,7 @@ Stage 2 sits before training on purpose. A bad dataset defeats a perfect trainin
 
 ---
 
-### Format design
+### **Format design**
 - [ ] Choosing one canonical format for the project and converting everything into it
 - [ ] Alpaca: `instruction` / `input` / `output`
 - [ ] ShareGPT: `conversations` with `from` / `value`
@@ -362,7 +361,7 @@ Stage 2 sits before training on purpose. A bad dataset defeats a perfect trainin
 - [ ] Matching the target model's chat template exactly, including special tokens
 - [ ] Deciding whether multi-turn conversations keep the prompt in every turn or only the first
 
-### Catalog selection
+### **Catalog selection**
 - [ ] SFT: Alpaca (52K), Dolly (15K), OpenHermes-2.5 (1M), Tulu-3-SFT-mixture (940K), UltraChat (1.5M)
 - [ ] Preference: UltraFeedback (64K), HH-RLHF (170K), Argilla DPO mix (~50K), Tulu-3-Preference-mixture (~300K)
 - [ ] Tool use: ToolBench, Glaive-function-calling-v2 (113K), xLAM-function-calling-60k, ToolACE
@@ -370,7 +369,7 @@ Stage 2 sits before training on purpose. A bad dataset defeats a perfect trainin
 - [ ] Multimodal: LLaVA-Instruct (150K), ShareGPT4V (1.2M), ALLaVA-4V (1.4M), Cambrian-10M
 - [ ] Pretraining corpora are not SFT data (SmolLM-Corpus, C4) — know the difference
 
-### Quality assessment
+### **Quality assessment**
 - [ ] Read 100 random examples before anything else
 - [ ] Token-length distribution, and a decision about the long tail
 - [ ] Source distribution — 80% from one source is single-source bias
@@ -380,20 +379,20 @@ Stage 2 sits before training on purpose. A bad dataset defeats a perfect trainin
 - [ ] Label sanity checks: per-class counts, class balance, annotation agreement on a sample
 - [ ] Refusal and safety coverage for a public-facing model
 
-### Decontamination
+### **Decontamination**
 - [ ] Generating n-gram files for your training set
 - [ ] Running the harness with `--decontamination_ngrams_path`
 - [ ] Reading the `*_decontaminate` metrics, not just the clean metrics
 - [ ] Recording how many documents were stripped and which benchmark triggered it
 
-### Synthetic data
+### **Synthetic data**
 - [ ] Generate → filter → rank → decontaminate → train
 - [ ] Rubric-driven generation rather than free-form prompting
 - [ ] Real-data mixing ratio to prevent model collapse
 - [ ] Manual spot-check of a sample for hallucinations
 - [ ] Licensing posture of the generator's output
 
-### Compliance
+### **Compliance**
 - [ ] Provenance table: source, license, date, consent basis
 - [ ] PII stripping (Presidio, or an LLM scrub with a sample audit)
 - [ ] GDPR consent trail for user-generated data
@@ -402,7 +401,7 @@ Stage 2 sits before training on purpose. A bad dataset defeats a perfect trainin
 
 ---
 
-### Canonical ChatML conversion
+### **Canonical ChatML conversion**
 ```python
 import json
 from datasets import Dataset
@@ -421,7 +420,7 @@ def to_chatml(records):
 ds = Dataset.from_list(to_chatml(json.load(open("raw.jsonl"))))
 ```
 
-### Near-duplicate removal with MinHash
+### **Near-duplicate removal with MinHash**
 ```python
 # pip install datasketch
 from datasketch import MinHash, MinHashLSH
@@ -448,7 +447,7 @@ clean = ds.select(keep)
 print(f"{len(ds)} -> {len(clean)} after dedup")
 ```
 
-### Exact-duplicate pass
+### **Exact-duplicate pass**
 ```python
 import hashlib
 
@@ -462,7 +461,7 @@ def dedup_exact(ds, column="text"):
     return ds.select(keep)
 ```
 
-### Format consistency check before training
+### **Format consistency check before training**
 ```python
 from transformers import AutoTokenizer
 
@@ -482,7 +481,7 @@ print(f"Token count: {tokens.input_ids.shape[1]}")
 # A bimodal distribution means two chat templates are mixed in the dataset.
 ```
 
-### Length distribution and source balance
+### **Length distribution and source balance**
 ```python
 import numpy as np
 from collections import Counter
@@ -494,7 +493,7 @@ print("share over 4096 tokens:", np.mean(np.array(lens) > 4096))
 print(Counter(ds["source"]).most_common(10))
 ```
 
-### PII scrubbing
+### **PII scrubbing**
 ```python
 # pip install presidio-analyzer presidio-anonymizer
 from presidio_anonymizer import AnonymizerEngine
@@ -504,7 +503,7 @@ result = engine.anonymize(text=text, language="en")
 print(result.text)
 ```
 
-### Synthetic preference generation with a rubric
+### **Synthetic preference generation with a rubric**
 ```python
 # pip install distilabel
 # Distilabel's latest PyPI release is 1.5.3 (Jan 2025) — pin it and read the
@@ -515,7 +514,7 @@ from distilabel.models import InferenceAPIModel, TextGeneration
 # build: prompts -> N candidates -> judge (rubric) -> best/worst pairs
 ```
 
-### Domain dataset construction, end to end
+### **Domain dataset construction, end to end**
 ```python
 from datasets import Dataset, load_dataset
 
@@ -540,7 +539,7 @@ DatasetDict({"train": train, "validation": val, "test": test}).push_to_hub(
 
 ---
 
-## Licensing and the EU AI Act
+## **Licensing and the EU AI Act**
 | Date | What applies |
 |---|---|
 | 2 Feb 2025 | Prohibitions, definitions, AI literacy |
@@ -572,14 +571,14 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 
 ---
 
-### Lab 2-1 — Inspect a public dataset (0.5 day)
+### **Lab 2-1 — Inspect a public dataset**
 - Take `OpenHermes-2.5` or `Tulu-3-SFT-mixture`.
 - Read 100 random examples.
 - Compute the length distribution.
 - Check for duplicates with MinHash.
 - Check MMLU contamination with the harness decontaminator.
 
-### Lab 2-2 — Build a small domain dataset (1–2 days)
+### **Lab 2-2 — Build a small domain dataset**
 - Pick a domain (for example "explain ML papers").
 - Generate 1K synthetic samples with a strong model and a rubric.
 - Filter by quality.
@@ -587,25 +586,25 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 - Verify chat-template tokenization across 500 rows.
 - Push to the Hub with a data card.
 
-### Lab 2-3 — Build a DPO dataset (1–2 days)
+### **Lab 2-3 — Build a DPO dataset**
 - Reuse Lab 2-2's prompts.
 - Generate 2–3 candidate completions per prompt.
 - Rank with an LLM judge and an explicit rubric.
 - Format as `{prompt, chosen, rejected}`.
 - Measure the hard-negative rate: what share of pairs are "close calls" rather than obvious wins.
 
-### Lab 2-4 — Decontamination pipeline (1 day)
+### **Lab 2-4 — Decontamination pipeline**
 - Take a known-contaminated dataset.
 - Generate n-gram files and run the harness against MMLU, HumanEval, and GSM8K.
 - Measure how much was stripped, per benchmark.
 - Document the result in the data card.
 
-### Lab 2-5 — Format consistency check (0.5 day)
+### **Lab 2-5 — Format consistency check**
 - Convert an Alpaca-format dataset to ShareGPT, ChatML, and the target model's chat template.
 - Compare token counts and length distributions.
 - Verify the chat template handles each format correctly, including multi-turn.
 
-### Lab 2-6 — Compliance pass (1 day)
+### **Lab 2-6 — Compliance pass**
 - Build the provenance table for your dataset: source, license, date, consent basis.
 - Run PII scrubbing and manually audit 100 outputs.
 - Write the data card: intended use, known limits, collection method, license, eval contamination status.
@@ -613,7 +612,7 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **"5K diverse" beats "50K near-duplicates"** — synthetic generation without dedup is the single most common way people waste a training budget.
 - **A chat-template mismatch is invisible until you tokenize.** Always render 500 rows, not one.
 - **Decontamination is not optional.** MMLU and similar evals appear inside common SFT mixtures; if you train on them, your eval numbers are not measurements.
@@ -625,7 +624,7 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] The five rules can each be explained in one sentence with an example from your own data.
 - [ ] A domain dataset of 1K–5K examples is public on the Hub with a data card.
 - [ ] Deduplication report: how many rows removed by exact and near-duplicate passes.
@@ -637,7 +636,7 @@ The Digital Omnibus on AI entered into force 27 July 2026 and is what moved the 
 
 ---
 
-## Resources
+## **Resources**
 - datasets on PyPI — https://pypi.org/project/datasets/
 - EU AI Act implementation timeline — https://ai-act-service-desk.ec.europa.eu/en/ai-act/timeline/timeline-implementation-eu-ai-act
 - Navigating the AI Act — https://digital-strategy.ec.europa.eu/en/faqs/navigating-ai-act

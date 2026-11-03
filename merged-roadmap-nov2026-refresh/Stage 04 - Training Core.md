@@ -1,10 +1,9 @@
-# Stage 04 — Training Core
+# **Stage 04 — Training Core**
 
-**Weeks:** 13 and 16–18
 **Libraries:** `accelerate` 1.15.0 · `peft` 0.21.2 · `trl` 1.17.1 · `safetensors` 0.8.0 · `bitsandbytes` 0.50.2
 **Outcome:** fine-tune a base model on your own data with LoRA or QLoRA, resume it, and save a checkpoint any other tool can load.
 
-## Accelerate 1.15.0
+## **Accelerate 1.15.0**
 
 Runs the same PyTorch training code on a single GPU, multi-GPU, TPU, or CPU with minimal changes. It powers the `Trainer` inside Transformers [30].
 
@@ -70,7 +69,7 @@ accelerate launch --num_processes=4 --mixed_precision=bf16 train.py
 pip install -U accelerate
 ```
 
-## PEFT 0.21.2 — parameter-efficient fine-tuning
+## **PEFT 0.21.2 — parameter-efficient fine-tuning**
 
 Fine-tune massive models (7B, 13B, 70B) on limited GPUs by training a tiny fraction of the weights. LoRA is the dominant technique [9].
 
@@ -206,12 +205,12 @@ The honest verdict from the source material, unchanged by any version drift: sta
 pip install -U peft
 ```
 
-## TRL 1.17.1 — supervised fine-tuning
+## **TRL 1.17.1 — supervised fine-tuning**
 
 TRL is the post-training primitive layer: SFT, preference optimization, and RL [6][7].
 
-> [!warning] The tier model changed under you
-> TRL v1.x splits trainers into stable (semver-guaranteed) and `trl.experimental` (APIs can change in any minor release). **PPO was removed from TRL entirely in 1.13.0** (`PPOTrainer`, `PPOConfig`, `modeling_value_head.py`), and `trl.losses` was removed in 1.14.0. The current stable set is SFT, DPO, KTO (stable since 1.8), Reward, RLOO, GRPO, and Distillation (stable since 1.10). Experimental trainers have been deleted in minor releases before — v1.14 removed six of them and v1.17 removed TPO — so pin `trl` and check release notes before upgrading.
+The tier model changed under you
+TRL v1.x splits trainers into stable (semver-guaranteed) and `trl.experimental` (APIs can change in any minor release). **PPO was removed from TRL entirely in 1.13.0** (`PPOTrainer`, `PPOConfig`, `modeling_value_head.py`), and `trl.losses` was removed in 1.14.0. The current stable set is SFT, DPO, KTO (stable since 1.8), Reward, RLOO, GRPO, and Distillation (stable since 1.10). Experimental trainers have been deleted in minor releases before — v1.14 removed six of them and v1.17 removed TPO — so pin `trl` and check release notes before upgrading.
 
 ```python
 from datasets import load_dataset
@@ -253,8 +252,8 @@ trainer.save_model("./my-sft-model")
 - Memory options: `gradient_checkpointing`, `activation_offloading`, chunked loss options
 - `use_liger_kernel` is **deprecated** in trainers and scheduled for removal in TRL 2.0.0
 
-> [!tip] The kernel that matters
-> TRL now defaults to a **fused Triton logprob + entropy kernel** in `trl.kernels`. It is not a micro-optimization: with it, DPO's maximum sequence length rises from 10,240 to 59,392 tokens on a 79 GiB GPU. Long-context preference tuning is newly practical.
+The kernel that matters
+TRL now defaults to a **fused Triton logprob + entropy kernel** in `trl.kernels`. It is not a micro-optimization: with it, DPO's maximum sequence length rises from 10,240 to 59,392 tokens on a 79 GiB GPU. Long-context preference tuning is newly practical.
 
 **Package extras that decide your install:** `trl[peft]` pulls PEFT ≥0.17; `trl[kernels]` pulls `transformers[kernels]`; `trl[harbor]` pulls Harbor ≥0.13 on Python ≥3.12; `trl[vlm]` pulls torchvision. Base requirements are transformers ≥4.56.2, datasets ≥4.7.0, accelerate ≥1.11.0, torch ≥2.6.0, numpy ≥1.26.0, Python ≥3.11.
 
@@ -269,7 +268,7 @@ pip install -U trl
 pip install -U "trl[peft,kernels]"
 ```
 
-## Safetensors 0.8.0
+## **Safetensors 0.8.0**
 
 The standard format for storing neural network weights: safe, fast, and with no arbitrary code execution risk, unlike pickle-based `.bin` and `.pt` files. All modern models on the Hub use it [31].
 
@@ -309,7 +308,7 @@ pip install -U safetensors
 
 ---
 
-## Optimizers
+## **Optimizers**
 
 **AdamW (standard):**
 
@@ -328,7 +327,7 @@ v_t = β₂v_{t-1} + (1-β₂)g_t²
 
 **LR schedule:** warmup (100–500 steps) → cosine decay. LoRA learning rates sit at 1e-4 to 5e-5; full fine-tuning at 1e-5 to 2e-5. Gemma 4's own tooling suggests 2e-4 for QLoRA and 2e-5 for full fine-tuning, with LoRA rank 16 or 32 and `lora_alpha` at twice the rank.
 
-## SFT data preparation
+## **SFT data preparation**
 
 - `tokenizer.apply_chat_template()` — standardised across Llama, Qwen, Gemma, DeepSeek, and it is the only correct way to render training text.
 - Multi-turn format: `system → user → assistant → tool_call → tool_response → assistant`.
@@ -355,7 +354,7 @@ target_modules = ["query", "value"]
 target_modules = ["q_proj", "v_proj"]  # encoder layers
 ```
 
-## VRAM budget for supervised fine-tuning
+## **VRAM budget for supervised fine-tuning**
 
 The 8B reference row is the classical baseline; the Gemma 4 and Qwen rows are what you will actually use in Nov 2026.
 
@@ -375,7 +374,7 @@ The 8B reference row is the classical baseline; the Gemma 4 and Qwen rows are wh
 | Qwen3.8-27B, QLoRA | ~24 GB | LoRA needs >36 GB; full FT 4× more |
 | Mistral Large 4, FP8 LoRA | 8×B300 node | TRL 1.17.0 ships the recipe |
 
-## SFT framework selection
+## **SFT framework selection**
 
 | Framework | Best for | Key feature |
 |---|---|---|
@@ -386,7 +385,7 @@ The 8B reference row is the classical baseline; the Gemma 4 and Qwen rows are wh
 | **Tunix (Google)** | TPU clusters | JAX-native; Gemma/Llama/Qwen; GRPO. Pointer only — not re-verified in this refresh |
 | **Haven (YC 2025)** | Serverless | Hundreds of LoRA adapters; claimed <1s cold start. Pointer only — not re-verified in this refresh |
 
-## Thinking-mode handling
+## **Thinking-mode handling**
 
 Qwen3, Qwen3.5, Qwen3.6+ and the Gemma 4 reasoning variants all expose a thinking mode, and mishandling it during SFT is one of the most common ways to destroy a model's reasoning ability.
 
@@ -404,7 +403,7 @@ tokenizer.apply_chat_template(messages, enable_thinking=False)
 
 Qwen3.8 adds a third control: `reasoning_effort` with `xhigh` (default), `medium` and `low`, alongside `enable_thinking=False` to turn reasoning off entirely for a turn, and `preserve_thinking=True` as the default that retains prior-turn reasoning across a conversation [70].
 
-## Catastrophic forgetting
+## **Catastrophic forgetting**
 
 | Strategy | When to use |
 |---|---|
@@ -419,14 +418,14 @@ For the thinking-mode row specifically: mixing at least three-quarters reasoning
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 3 is the training core: the four libraries that turn a dataset and a base model into weights you can serve. PEFT decides what is trainable, TRL decides what the loss is, Accelerate decides how the work is distributed, and safetensors decides how the result is stored.
 
 **Exit criterion:** a public LoRA adapter on a domain dataset, with a training curve, an eval number, and a checkpoint that loads in a different process without conversion.
 
-## Environment
+## **Environment**
 ```bash
 pip install -U accelerate peft trl safetensors tokenizers
 pip install -U "trl[peft,kernels]"
@@ -436,14 +435,14 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 
 ---
 
-### Core concepts
+### **Core concepts**
 - [ ] The `Accelerator` object as central controller
 - [ ] `accelerator.prepare()` wrapping model, optimizer, dataloader
 - [ ] `accelerator.backward()`
 - [ ] Mixed precision (fp16, bf16)
 - [ ] Gradient accumulation and gradient clipping
 
-### Training setups
+### **Training setups**
 - [ ] Single GPU
 - [ ] Multi-GPU (DDP)
 - [ ] Multi-node
@@ -451,13 +450,13 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 - [ ] DeepSpeed integration (ZeRO stages 1, 2, 3)
 - [ ] FSDP (Fully Sharded Data Parallel)
 
-### State management
+### **State management**
 - [ ] `save_state()` and `load_state()`
 - [ ] `wait_for_everyone()` — sync across processes
 - [ ] `gather()` — collect tensors from all GPUs
 - [ ] `is_main_process` — run code only on rank 0
 
-### Utilities and CLI
+### **Utilities and CLI**
 - [ ] `find_executable_batch_size` — automatic batch size search on OOM
 - [ ] `notebook_launcher` — distributed training from a notebook
 - [ ] `PartialState` — lightweight distributed state
@@ -465,7 +464,7 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 
 ---
 
-### LoRA
+### **LoRA**
 - [ ] Concept: train only the low-rank decomposition matrices
 - [ ] `r` — rank, controls how many parameters are trained
 - [ ] `lora_alpha` — scaling factor (keep α = 2×r)
@@ -478,7 +477,7 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 - [ ] `PeftModel.from_pretrained()`
 - [ ] `merge_and_unload()`
 
-### QLoRA
+### **QLoRA**
 - [ ] 4-bit quantization with the NF4 dtype
 - [ ] Double quantization
 - [ ] `BitsAndBytesConfig` integration
@@ -486,14 +485,14 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 - [ ] Fine-tuning 7B and larger models on a single consumer GPU
 - [ ] Merging a QLoRA adapter: reload the base in 16-bit, attach, then merge
 
-### The wider family
+### **The wider family**
 - [ ] Prefix Tuning, Prompt Tuning, P-Tuning
 - [ ] IA3
 - [ ] AdaLoRA
 - [ ] LoftQ — quantization-aware LoRA initialization
 - [ ] DoRA, GaLore, rsLoRA, OLoRA, LoHa, LoKr, OFT, VeRA, X-LoRA
 
-### Task types and multi-adapter use
+### **Task types and multi-adapter use**
 - [ ] `TaskType.SEQ_CLS`, `TOKEN_CLS`, `CAUSAL_LM`, `SEQ_2_SEQ_LM`, `QUESTION_ANS`
 - [ ] Loading multiple adapters
 - [ ] Switching between adapters
@@ -501,7 +500,7 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 
 ---
 
-## Topic checklist — TRL SFT
+## **Topic checklist — TRL SFT**
 - [ ] `SFTTrainer`, `SFTConfig`, `formatting_func`
 - [ ] Passing a model id string directly to the trainer
 - [ ] Dataset formats — plain text, prompt/completion, conversational `messages`
@@ -516,7 +515,7 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 - [ ] Frozen reference model for KL divergence
 - [ ] Reading training logs for collapsed reward signals
 
-### TRL version discipline
+### **TRL version discipline**
 - [ ] Stable trainers in 1.17.1: SFT, DPO, KTO, Reward, RLOO, GRPO, Distillation
 - [ ] Experimental trainers under `trl.experimental` — APIs can change in any minor release
 - [ ] PPO was removed in 1.13.0 (`PPOTrainer`, `PPOConfig`, `modeling_value_head.py`)
@@ -527,7 +526,7 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 
 ---
 
-## Topic checklist — Safetensors
+## **Topic checklist — Safetensors**
 - [ ] Why it exists: no arbitrary code execution, unlike pickle
 - [ ] Format: a JSON header followed by raw tensor bytes
 - [ ] Zero-copy, memory-mapped loading
@@ -543,7 +542,7 @@ TRL 1.17.1 requires Python ≥3.11, transformers ≥4.56.2, datasets ≥4.7.0, a
 
 ---
 
-### Accelerate, manual loop
+### **Accelerate, manual loop**
 ```python
 from accelerate import Accelerator
 
@@ -569,7 +568,7 @@ accelerator.save_state("./checkpoint")
 accelerator.load_state("./checkpoint")
 ```
 
-### LoRA, in two variants
+### **LoRA, in two variants**
 ```python
 from transformers import AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model, TaskType
@@ -610,7 +609,7 @@ model = get_peft_model(model, LoraConfig(
     lora_dropout=0.05, target_modules="all-linear"))
 ```
 
-### Save, load, merge
+### **Save, load, merge**
 ```python
 model.save_pretrained("./lora-adapter")
 model.push_to_hub("username/my-lora-adapter")
@@ -624,7 +623,7 @@ merged.save_pretrained("./merged-model")
 
 To merge a QLoRA adapter, reload the base in **16-bit** (not 4-bit), attach the adapter, then merge.
 
-### SFT on your own dataset
+### **SFT on your own dataset**
 ```python
 from datasets import load_dataset
 from peft import LoraConfig
@@ -656,7 +655,7 @@ trainer.train()
 trainer.save_model("./my-sft-model")
 ```
 
-### Safetensors inspection
+### **Safetensors inspection**
 ```python
 import torch
 from safetensors.torch import save_file, load_file
@@ -671,7 +670,7 @@ with safe_open("model.safetensors", framework="pt") as f:
     weight = f.get_tensor("weight")
 ```
 
-### 8-bit optimizers
+### **8-bit optimizers**
 ```python
 import bitsandbytes as bnb
 optimizer = bnb.optim.AdamW8bit(model.parameters(), lr=2e-4)
@@ -680,7 +679,7 @@ optimizer = bnb.optim.AdamW8bit(model.parameters(), lr=2e-4)
 
 ---
 
-## Hyperparameter reference
+## **Hyperparameter reference**
 | Knob | Default | Notes |
 |---|---|---|
 | `r` | 16 | 8 when memory-bound, 64 when quality-bound |
@@ -695,7 +694,7 @@ optimizer = bnb.optim.AdamW8bit(model.parameters(), lr=2e-4)
 
 ---
 
-## Memory reference
+## **Memory reference**
 | Model | Full FT (fp16 + Adam) | LoRA r=16 | QLoRA NF4 |
 |---|---|---|---|
 | 7B | ~84 GB | ~16 GB | ~6–8 GB |
@@ -706,36 +705,36 @@ Full FT needs roughly 2× model size for weights plus gradients, plus 4–8× fo
 
 ---
 
-### Lab 3-1 — LoRA from scratch in PyTorch (~150 lines, 1 day)
+### **Lab 3-1 — LoRA from scratch in PyTorch (~150 lines)**
 - Implement `LoRALinear` with a frozen base and a low-rank `A`/`B` update.
 - Verify that the output matches the base model exactly at initialization (`B` is zero-initialized).
 - Attach it to a real `q_proj` and confirm `print_trainable_parameters()` shows the expected 0.1–0.5% trainable ratio.
 - Train briefly and compare the loss curve against PEFT's implementation on identical data.
 
-### Lab 3-2 — SFT on your own dataset (2–3 days)
+### **Lab 3-2 — SFT on your own dataset**
 - Take your Stage 2 dataset and train LoRA on it.
 - Sweep `r` ∈ {8, 16, 32} and learning rate ∈ {1e-4, 2e-4, 5e-4}; record the eval metric for each.
 - Try `completion_only_loss` versus `assistant_only_loss` and record the difference in loss scale.
 - Push the adapter to the Hub with a model card.
 
-### Lab 3-3 — QLoRA on a consumer GPU (1–2 days)
+### **Lab 3-3 — QLoRA on a consumer GPU**
 - Train a 7B/8B model with NF4 + double quantization on a 16–24 GB card.
 - Record peak memory, tokens/sec, and wall time.
 - Merge the adapter in 16-bit and confirm the merged model's eval score matches the adapter's.
 
-### Lab 3-4 — Distributed run with Accelerate (1–2 days)
+### **Lab 3-4 — Distributed run with Accelerate**
 - `accelerate config`, `accelerate test`, then a two-process DDP run on one node.
 - Add gradient accumulation and confirm the effective batch size is what you think it is.
 - Save and resume from `accelerator.save_state()` and confirm the loss curve is continuous.
 
-### Lab 3-5 — Checkpoint hygiene (0.5 day)
+### **Lab 3-5 — Checkpoint hygiene**
 - Save with `safetensors` and confirm no `.bin` files appear.
 - Convert an old `.bin` checkpoint to safetensors and verify identical outputs.
 - Inspect a sharded checkpoint through `model.safetensors.index.json`.
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **`max_seq_length` → `max_length`.** The old name raises an error in TRL 1.x.
 - **`DataCollatorForCompletionOnlyLM` is gone.** Use `completion_only_loss` or `assistant_only_loss`.
 - **Assistant-only loss needs a chat template with generation markers.** Without them, the mask is wrong and the loss is meaningless.
@@ -749,7 +748,7 @@ Full FT needs roughly 2× model size for weights plus gradients, plus 4–8× fo
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] A LoRA implementation written from scratch matches PEFT numerically.
 - [ ] A QLoRA fine-tune completed on your own dataset and was pushed to the Hub.
 - [ ] A merged model scores the same as the adapter it came from.
@@ -759,7 +758,7 @@ Full FT needs roughly 2× model size for weights plus gradients, plus 4–8× fo
 
 ---
 
-## Resources
+## **Resources**
 - TRL v1.17.1 release — https://github.com/huggingface/trl/releases/tag/v1.17.1
 - trl on PyPI — https://pypi.org/project/trl/
 - PEFT v0.21.2 release — https://github.com/huggingface/peft/releases/tag/v0.21.2

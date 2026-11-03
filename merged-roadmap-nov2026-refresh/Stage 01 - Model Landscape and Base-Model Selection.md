@@ -1,11 +1,11 @@
-# Stage 1 — Model Landscape and Base-Model Selection
+# **Stage 1 — Model Landscape and Base-Model Selection**
 
 **Outcome:** you can take a task constraint, narrow it to one base model, and defend the choice on four axes — capability, license, memory footprint, and tooling support. Nothing is trained in this stage; everything downstream depends on it.
 
-> [!important] The distinction that decides this stage
-> **Released**, **open-weight**, and **fine-tunable in this roadmap** are three different sets. Mistral Large 4, Kimi K3, Muse Spark Open, Qwen3.8-2.4T and GLM-5.3 are all *released* and all *open-weight*, and none of them is fine-tunable on anything a learner or a small team owns. Kimi K3.1 Pro is *released* (API) and not yet *open-weight*. Qwen3-4B-Instruct-2507 and Gemma 4 E4B are the only models in the frontier-adjacent set that are fine-tunable on a consumer GPU. Every table below is labelled on both axes, because a roadmap that blurs them sends people to spend a week downloading 1 TB of weights they cannot train.
+The distinction that decides this stage
+**Released**, **open-weight**, and **fine-tunable in this roadmap** are three different sets. Mistral Large 4, Kimi K3, Muse Spark Open, Qwen3.8-2.4T and GLM-5.3 are all *released* and all *open-weight*, and none of them is fine-tunable on anything a learner or a small team owns. Kimi K3.1 Pro is *released* (API) and not yet *open-weight*. Qwen3-4B-Instruct-2507 and Gemma 4 E4B are the only models in the frontier-adjacent set that are fine-tunable on a consumer GPU. Every table below is labelled on both axes, because a roadmap that blurs them sends people to spend a week downloading 1 TB of weights they cannot train.
 
-## Refreshed landscape as of 3 November 2026
+## **Refreshed landscape as of 3 November 2026**
 
 The October–November 2026 release window moved the field more than the previous six months combined. Six families arrived or matured inside a single quarter, and two of them are directly fine-tunable in the sense this roadmap cares about.
 
@@ -33,7 +33,7 @@ The October–November 2026 release window moved the field more than the previou
 | jina-reranker-v3.5 | jina.ai | 20 Jul 2026 | — | — | — | — | Current compact reranker |
 | KURE-Reranker-nano | KURE | 9 Sep 2026 | — | — | — | — | Smallest reranker in the current MTEB space |
 
-## May 2026 leaderboard snapshot, retained with corrections
+## **May 2026 leaderboard snapshot, retained with corrections**
 
 The source document's May 2026 table is preserved because it is a useful record of how fast the frontier moved. Every row is now stale in at least one column, and the two rows that are still strategically useful are the DeepSeek and Gemma rows.
 
@@ -52,11 +52,11 @@ The source document's May 2026 table is preserved because it is a useful record 
 
 The trend line the source noted still holds, with one correction: MIT/Apache-2.0 is *not* the universal norm at the frontier. The October–November wave introduced three custom licenses — Qwen's Max License for the 2.4T model, Mistral's Ecosystem Open-Weight License, and Meta's Muse Model License — each with a revenue-triggered clause. License auditing stopped being a formality in October 2026.
 
-## Model families, by type
+## **Model families, by type**
 
 The source document organised the landscape by parameter class, which is still the right frame for "what can I actually train". Each subsection below keeps that structure and refreshes the numbers.
 
-### Small language models (under 4B effective parameters)
+### **Small language models (under 4B effective parameters)**
 
 | Model | Params | Release | Notes |
 |---|---|---|---|
@@ -111,7 +111,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 # preserve_thinking=True in API for multi-turn agentic workflows (Qwen3.6+)
 ```
 
-### Dense language models (7B–72B)
+### **Dense language models (7B–72B)**
 
 | Model | Params | Release | Notes |
 |---|---|---|---|
@@ -155,7 +155,7 @@ model.print_trainable_parameters()
 # gemma_lm.backbone.enable_lora(rank=16)
 ```
 
-### Mixture-of-experts models
+### **Mixture-of-experts models**
 
 | Model | Total params | Active params | Release | Notes |
 |---|---|---|---|---|
@@ -206,7 +206,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 # Unsloth ships a dedicated MoE fast path; measure your own step time.
 ```
 
-### Vision-language models
+### **Vision-language models**
 
 | Model | Notes |
 |---|---|
@@ -270,7 +270,7 @@ for param in model.model.visual.parameters():
     param.requires_grad = False  # freeze vision encoder
 ```
 
-### Diffusion models
+### **Diffusion models**
 
 | Model | Notes |
 |---|---|
@@ -320,7 +320,7 @@ lora_config = LoraConfig(
 # Requires >= 24 GB VRAM for FLUX BF16
 ```
 
-### Audio models
+### **Audio models**
 
 ASR:
 
@@ -376,7 +376,7 @@ def compute_metrics(pred):
     return {"wer": wer_metric.compute(predictions=pred_str, references=label_str)}
 ```
 
-### Embedding models
+### **Embedding models**
 
 | Model | Dim | Notes |
 |---|---|---|
@@ -412,7 +412,7 @@ loss       = MatryoshkaLoss(
 # Hard negatives are critical — mine with BM25 or embedding similarity
 ```
 
-## License audit for the candidate set
+## **License audit for the candidate set**
 
 License is a selection constraint, not a legal footnote. Three of the five October–November frontier releases carry revenue-triggered clauses, so this table decides real commercial outcomes.
 
@@ -431,7 +431,7 @@ License is a selection constraint, not a legal footnote. Three of the five Octob
 
 Three rules follow directly. First, **MIT ≠ Modified MIT ≠ Apache-2.0 ≠ "open"**: the source document's own closing rule called this out, and the October wave made it more important, not less. Second, **"open weights" does not mean "open source"** — Muse Spark Open permits modification and redistribution, but attaches a usage policy and a revenue trigger. Third, **a fine-tune inherits the base licence** unless the licence says otherwise; Muse Spark explicitly permits fine-tuning and derivatives, LFM does not grant commercial use above its threshold, and Kimi K3 requires negotiation above its own.
 
-## Memory and hardware matrix
+## **Memory and hardware matrix**
 
 This is the table that decides the base model, because a model you cannot fit is not a candidate. Unsloth's published numbers are the reference; the column is what the configuration needs, not what the weights alone cost.
 
@@ -458,7 +458,7 @@ This is the table that decides the base model, because a model you cannot fit is
 
 Gemma 4 inference memory, for reference when you are serving rather than training: E2B 4 GB at 4-bit, 5–8 GB at 8-bit, 10 GB at bf16; E4B 5.5–6 GB / 9–12 GB / 16 GB; 12B Unified 7–8 GB / 13–14 GB / 25 GB. Unsloth's dynamic NVFP4 builds need 7 GB (E2B), 9 GB (E4B) and 11 GB (12B) and are 1.12–1.26× faster than bf16 on Blackwell [77]. Google's recommended sampling for Gemma 4 is `temperature=1.0`, `top_p=0.95`, `top_k=64`.
 
-## Base-model decision framework
+## **Base-model decision framework**
 
 The source document's decision tree, rewritten against the November 2026 landscape. Each branch answers a real constraint, and each points at models that are actually trainable in this roadmap unless the answer says otherwise.
 
@@ -504,7 +504,7 @@ Goal: pick the right base model for fine-tuning.
   → Qwen3.6-35B-A3B (3B active)
 ```
 
-## Model landscape pre-flight checklist
+## **Model landscape pre-flight checklist**
 
 - [ ] The chosen base is **open-weight**, not API-only, if the plan involves any adapter training.
 - [ ] The licence has been read in full, and the revenue trigger (if any) is compatible with the intended product.

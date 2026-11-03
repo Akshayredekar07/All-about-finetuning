@@ -1,10 +1,9 @@
-# Stage 05 — Alignment and Post-Training
+# **Stage 05 — Alignment and Post-Training**
 
-**Weeks:** 19–22
 **Libraries:** `trl` 1.17.1 (DPO, KTO, GRPO, RLOO, Reward, Distillation) · `peft` 0.21.2 · `verl` 0.9.1 · `OpenRLHF` 0.11.2 · `SkyRL` 0.4.0
 **Outcome:** take an SFT checkpoint and either align it to preferences or train it against a verifiable reward — with evidence that the alignment helped and did not break the base model.
 
-## Preference optimization
+## **Preference optimization**
 
 **What SFT teaches, and what it does not.** SFT teaches **format** (chat template, tool use, JSON output), **style** (voice, tone, length, structure), and **behavior** (instruction-following, a domain task). It does not teach **preferences** — that is DPO. It does not teach **reasoning** — that is GRPO.
 
@@ -51,7 +50,7 @@ The reference model is created for you, or derived from the adapter when using P
 
 **Reward modeling** (`RewardTrainer` / `RewardConfig`) takes the same `chosen`/`rejected` format and produces a reward model for RL or for labeling iterative pairs.
 
-## RL fine-tuning: PPO, GRPO, RLVR
+## **RL fine-tuning: PPO, GRPO, RLVR**
 
 **The case for RL.** Reasoning models (o1, o3, DeepSeek R1 and R1-Zero) are produced by RL fine-tuning on tasks with verifiable rewards — math answers, passing code tests, format checks. DPO cannot do this: it learns from static preference data, not from the model's own attempts.
 
@@ -123,7 +122,7 @@ trainer.train()
 3. Optional iterative DPO to refine preferences.
 4. Merge LoRA → quantize → serve.
 
-## Distillation
+## **Distillation**
 
 Train a small model to mimic a large one — teacher → student — usually with a KL term between token distributions: `L = α·KL(p_student ‖ p_teacher) + (1-α)·CE(y, p_student)`.
 
@@ -131,7 +130,7 @@ Use it when you need a smaller, faster, cheaper model of similar quality, or whe
 
 **Tools:** `transformers` + a custom training loop, `accelerate` for multi-GPU, TextBrewer for task-specific distillation, `distilwhisper`-style recipes for ASR, and the DeepSeek-R1-Distill family as the 2025–2026 standard for "reasoning model at small size".
 
-## Alignment mental model
+## **Alignment mental model**
 
 1. PEFT (the LoRA family) is the default for SFT. Vanilla LoRA r=16, all-linear, α=32, lr 1e-4 to 5e-4. Switch variants only when measured.
 2. QLoRA is the de facto standard for single-GPU: NF4 + double quantization + LoRA in BF16.
@@ -140,7 +139,7 @@ Use it when you need a smaller, faster, cheaper model of similar quality, or whe
 5. The standard pipeline is SFT → DPO/GRPO. No RL works without a seeded SFT base.
 6. Distillation is for compression, not new behavior.
 
-## The post-training stack
+## **The post-training stack**
 
 ```
 Base Pretrained Model
@@ -156,7 +155,7 @@ Base Pretrained Model
 Quantize + Export + Serve
 ```
 
-## Preference optimization methods
+## **Preference optimization methods**
 
 | Method | Year | Reference model | Reward model | Key formula |
 |---|---|---|---|---|
@@ -179,7 +178,7 @@ L_DPO = -E [ log σ ( β × [
 
 Best practice from the merge: mix roughly 80% SFT data with 20% preference data during DPO to prevent forgetting.
 
-## Reasoning RL: the GRPO family
+## **Reasoning RL: the GRPO family**
 
 **GRPO — Group Relative Policy Optimization:**
 
@@ -225,7 +224,7 @@ training_args = GRPOConfig(
 
 `GRPOConfig.loss_type` accepts exactly `grpo`, `dr_grpo`, `dapo`, `bnpo`, `cispo`, `sapo`, `luspo` and `vespo` [102]. There is **no `gspo` value** — GSPO is `importance_sampling_level="sequence"` with `loss_type="grpo"`. TRL also warns that combining `importance_sampling_level="sequence"` with `bnpo`, `dr_grpo`, `dapo` or `cispo` re-weights sequences by completion length instead of optimising the per-sequence objective, and that TRL's `GRPOTrainer` has an `environment_factory` mode for environment-driven rollouts [103][104][105].
 
-## Verifier design
+## **Verifier design**
 
 The verifier is the actual algorithm. A weak verifier trains a model to exploit the verifier.
 
@@ -252,7 +251,7 @@ Partial credit on code is worth the extra effort: a binary pass/fail signal on a
 
 Reward-hacking mitigation, in order of how often it matters: hold out a verifier variant the model never trains against; check that partial credit correlates with the fraction of tests passed rather than with code length; log the reward distribution per group, because a group where all rewards are equal contributes no gradient and is usually a formatting bug; and audit a sample of the highest-reward trajectories by hand every few hundred steps.
 
-## Gradient-free fine-tuning
+## **Gradient-free fine-tuning**
 
 ```
 1. Sample parameter perturbations: {ε_1, ..., ε_N}
@@ -264,7 +263,7 @@ No backpropagation. Works natively in quantized environments.
 
 **QES (Quantized Evolution Strategies)** fine-tunes directly in NF4/INT4 and sidesteps gradient instability through the quantisation itself. It is reported as competitive with GRPO on mathematical reasoning, and it remains emerging. For a learner it is a useful weekend project: it requires no backward pass, runs against the same verifiers, and makes the estimator's variance visible in a way that backprop-based training never does.
 
-## Alignment pre-flight checklist
+## **Alignment pre-flight checklist**
 
 - [ ] State the LoRA forward pass in one equation.
 - [ ] What is the default LoRA config (r, α, target_modules, lr)?
@@ -282,16 +281,16 @@ No backpropagation. Works natively in quantized environments.
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 4 is the step most people conflate with SFT. SFT teaches what a good answer looks like. Preference optimization teaches the ordering between a good and a bad answer. RL teaches the model from its own attempts, scored by something checkable.
 
 **Exit criterion:** one preference-optimized checkpoint and one RL checkpoint, each with a held-out win rate, a capability regression table, and a written answer to "what went wrong".
 
 ---
 
-## Decision table
+## **Decision table**
 | Situation | Method | Why |
 |---|---|---|
 | Format, style, instruction-following | SFT (Stage 3) | Imitation is enough |
@@ -308,7 +307,7 @@ Stage 4 is the step most people conflate with SFT. SFT teaches what a good answe
 
 ---
 
-### DPO
+### **DPO**
 - [ ] The Bradley-Terry assumption `P(y_w ≻ y_l | x) = σ(r(x, y_w) - r(x, y_l))`
 - [ ] The optimal reward `r*(x, y) = β log(π(y|x) / π_ref(y|x)) + β log Z(x)`
 - [ ] Why `Z(x)` cancels and the loss becomes supervised
@@ -318,7 +317,7 @@ Stage 4 is the step most people conflate with SFT. SFT teaches what a good answe
 - [ ] Reference model created automatically, or derived from the adapter under PEFT
 - [ ] The reference-free variants and when they help
 
-### The siblings
+### **The siblings**
 - [ ] IPO — sigmoid replaced with MSE; bounds the margin
 - [ ] KTO — Kahneman-Tversky; binary `desirable` labels; no pairs required
 - [ ] SimPO — no reference model; length-normalized log-prob with a margin
@@ -326,21 +325,21 @@ Stage 4 is the step most people conflate with SFT. SFT teaches what a good answe
 - [ ] CPO, iterative DPO, and online variants — awareness only
 - [ ] Which of these are stable in TRL 1.17.1 (DPO, KTO) and which live in `trl.experimental`
 
-### Reward modeling
+### **Reward modeling**
 - [ ] `RewardTrainer` / `RewardConfig` on `chosen` / `rejected` data
 - [ ] Using a reward model to label iterative preference pairs
 - [ ] Reward-model calibration and its failure modes
 
 ---
 
-### PPO
+### **PPO**
 - [ ] Policy, reference, reward, and critic — four models resident at once
 - [ ] Memory cost: about 28 GB minimum for a 7B policy plus the rest of the stack
 - [ ] The clipped surrogate objective
 - [ ] KL coefficient, clipping range, value-loss coefficient
 - [ ] That TRL removed `PPOTrainer` in 1.13.0, so PPO today means verl or OpenRLHF
 
-### GRPO
+### **GRPO**
 - [ ] Policy + reference + reward, no critic
 - [ ] Group sampling: G rollouts per prompt
 - [ ] Group-relative baseline and within-group advantage normalization
@@ -348,7 +347,7 @@ Stage 4 is the step most people conflate with SFT. SFT teaches what a good answe
 - [ ] `GRPOTrainer`, `GRPOConfig`, `num_generations`, `beta`, `max_new_tokens`
 - [ ] Reward functions: plain Python, reward models, or a list of both
 
-### RLVR and its refinements
+### **RLVR and its refinements**
 - [ ] RLVR: skip the learned reward when the reward is programmatically checkable
 - [ ] DAPO — rule-based outcome rewards, 50% AIME 2024 accuracy with Qwen2.5-32B in half the baseline steps
 - [ ] Dr.GRPO — addresses response-length bias in reward normalization
@@ -357,7 +356,7 @@ Stage 4 is the step most people conflate with SFT. SFT teaches what a good answe
 - [ ] VIGOR — variance-guided rollout allocation; 2.3× fewer rollouts on math
 - [ ] Reward hacking: how to detect it and when to switch to rule-based rewards
 
-### Distillation
+### **Distillation**
 - [ ] Teacher → student framing
 - [ ] The KL objective `L = α·KL(p_student ‖ p_teacher) + (1-α)·CE(y, p_student)`
 - [ ] When distillation beats SFT on the teacher's outputs (it usually does not)
@@ -367,7 +366,7 @@ Stage 4 is the step most people conflate with SFT. SFT teaches what a good answe
 
 ---
 
-### The DPO loss, in full
+### **The DPO loss, in full**
 ```python
 import torch
 import torch.nn.functional as F
@@ -381,7 +380,7 @@ def dpo_loss(policy_chosen_logp, policy_rejected_logp,
     return -F.logsigmoid(logits).mean()
 ```
 
-### Training with DPO
+### **Training with DPO**
 ```python
 from datasets import load_dataset
 from trl import DPOConfig, DPOTrainer
@@ -404,7 +403,7 @@ trainer = DPOTrainer(
 trainer.train()
 ```
 
-### Verifying the merged LoRA and the reference model
+### **Verifying the merged LoRA and the reference model**
 ```python
 # Under PEFT, the reference model is the frozen base with the adapter disabled.
 # Under a full fine-tune, pass an explicit reference model.
@@ -419,7 +418,7 @@ trainer = DPOTrainer(
 )
 ```
 
-### A verifiable reward for GRPO
+### **A verifiable reward for GRPO**
 ```python
 import re
 
@@ -459,7 +458,7 @@ trainer = GRPOTrainer(
 trainer.train()
 ```
 
-### Combining a verifiable reward with a format reward
+### **Combining a verifiable reward with a format reward**
 ```python
 def combined_reward(completions, answer, **kwargs):
     """Correctness dominates; format compliance breaks ties.
@@ -475,7 +474,7 @@ def combined_reward(completions, answer, **kwargs):
     return [c + 0.1 * f for c, f in zip(correct, formatted)]
 ```
 
-### Monitoring for reward hacking
+### **Monitoring for reward hacking**
 ```python
 # Track these every N steps and plot them together:
 #   - mean reward per group
@@ -486,7 +485,7 @@ def combined_reward(completions, answer, **kwargs):
 # the classic signature of reward hacking, not of learning.
 ```
 
-### Distillation loop
+### **Distillation loop**
 ```python
 import torch
 import torch.nn.functional as F
@@ -502,7 +501,7 @@ def distillation_loss(student_logits, teacher_logits, labels, alpha=0.5, tempera
 
 ---
 
-## GRPO configuration reference
+## **GRPO configuration reference**
 | Knob | Typical | Why |
 |---|---|---|
 | `num_generations` (G) | 8 | 4 is cheaper, 16 gives a smoother baseline |
@@ -514,7 +513,7 @@ def distillation_loss(student_logits, teacher_logits, labels, alpha=0.5, tempera
 
 ---
 
-## Capability regression table
+## **Capability regression table**
 Every alignment run reports this, whether or not it flatters the result:
 
 | Benchmark | SFT | SFT + DPO | SFT + GRPO | Acceptable delta |
@@ -528,36 +527,36 @@ Every alignment run reports this, whether or not it flatters the result:
 
 ---
 
-### Lab 4-1 — DPO from scratch (2 days)
+### **Lab 4-1 — DPO from scratch**
 - Implement the DPO loss in PyTorch and verify it against TRL's implementation on one batch.
 - Train DPO on UltraFeedback with a 4B model.
 - Sweep `beta` ∈ {0.05, 0.1, 0.3}; report the held-out win rate and the reward margin for each.
 - Compare a separate reference model against LoRA-as-reference.
 
-### Lab 4-2 — Pairwise data audit (1 day)
+### **Lab 4-2 — Pairwise data audit**
 - Take 200 preference pairs from your own data.
 - Label each as obvious win or close call.
 - Report the hard-negative rate. If it is below 20%, the pairs are too easy to teach anything — regenerate them.
 
-### Lab 4-3 — GRPO on GSM8K (2–3 days)
+### **Lab 4-3 — GRPO on GSM8K**
 - Train a verifiable reward for GSM8K.
 - Run GRPO with G=8 and track mean reward, group variance, length, and KL.
 - Plot the four curves and identify where reward and variance diverge.
 - Evaluate on the held-out split and on MMLU for regression.
 
-### Lab 4-4 — Reward-hacking audit (1 day)
+### **Lab 4-4 — Reward-hacking audit**
 - Take a GRPO checkpoint and find 20 prompts where it produces the right answer for the wrong reason.
 - Measure format compliance, not just accuracy.
 - Fix by switching to a stricter verifier and re-running a short training.
 
-### Lab 4-5 — Distillation (2–3 days)
+### **Lab 4-5 — Distillation**
 - Distill a larger model into a 4B student on your domain data.
 - Compare student accuracy against the teacher's accuracy on the same held-out set.
 - Quantize the student and compare the accuracy delta against the teacher's quantized delta — distilled models often have a different optimal quantization threshold.
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **DPO on easy pairs teaches nothing.** If chosen is obviously better, the gradient is tiny and the model learns nothing.
 - **`beta` matters more than the learning rate.** It sets the strength of the KL constraint to the reference.
 - **DPO overfits noisy pairs.** IPO's bounded margin exists for this.
@@ -570,7 +569,7 @@ Every alignment run reports this, whether or not it flatters the result:
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] A DPO run produced a held-out win rate on IFEval, AlpacaEval 2.0, or Arena-Hard-Auto v2.
 - [ ] A GRPO run produced a held-out accuracy gain with a logged reward, variance, length, and KL curve.
 - [ ] Capability regression table filled in for both runs.
@@ -580,7 +579,7 @@ Every alignment run reports this, whether or not it flatters the result:
 
 ---
 
-## Resources
+## **Resources**
 - TRL v1.17.1 release — https://github.com/huggingface/trl/releases/tag/v1.17.1
 - verl v0.9.1 release — https://github.com/verl-project/verl/releases/tag/v0.9.1
 - OpenRLHF v0.11.2 release — https://github.com/OpenRLHF/OpenRLHF/releases/tag/v0.11.2

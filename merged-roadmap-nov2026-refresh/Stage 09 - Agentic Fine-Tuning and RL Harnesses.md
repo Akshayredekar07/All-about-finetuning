@@ -1,11 +1,11 @@
-# Stage 9 — Agentic Fine-Tuning and RL Harnesses
+# **Stage 9 — Agentic Fine-Tuning and RL Harnesses**
 
 **Outcome:** you can train an agent that uses tools over multiple turns, with a reward that is either verifiable or checklist-decomposed, and you can evaluate whether the agent got better rather than merely longer.
 
-> [!danger] The hard part is not the algorithm
-> Agentic post-training fails on three things, in this order: no environment to roll out in, a reward that rewards the wrong behaviour, and an evaluation that cannot distinguish a better agent from a more verbose one. Every framework in this stage is a solution to one of those three problems, not to the gradient maths.
+The hard part is not the algorithm
+Agentic post-training fails on three things, in this order: no environment to roll out in, a reward that rewards the wrong behaviour, and an evaluation that cannot distinguish a better agent from a more verbose one. Every framework in this stage is a solution to one of those three problems, not to the gradient maths.
 
-## Why this is a separate stage
+## **Why this is a separate stage**
 
 Through Stage 5 you trained a model that answers. Stage 9 trains a model that **acts**: it calls tools, reads their output, decides what to do next, and stops when the task is done. That changes the data type (trajectories, not prompt–response pairs), the reward type (outcomes, not preferences), the training loop (rollouts against an environment, so the trainer needs a server), and the evaluation (task completion, not answer similarity).
 
@@ -27,7 +27,7 @@ Quantize + Export + Serve
 
 Stage 4 of that diagram is this stage, and it is the one that needs infrastructure you do not build from scratch.
 
-## The four named systems
+## **The four named systems**
 
 | System | What it contributes | Released | Reference |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Stage 4 of that diagram is this stage, and it is the one that needs infrastructu
 
 Plus one pattern observed in a deployed frontier model, rather than a paper: **orchestrator plus frozen sub-agents**.
 
-## ART and RULER
+## **ART and RULER**
 
 ART is the most directly usable of the four for a learner, because it runs GRPO over real multi-turn rollouts against a live vLLM server.
 
@@ -60,7 +60,7 @@ for step in range(max_steps):
     adapter = grpo_trainer.train(trajectories, rewards)   # LoRA updated, reloaded into the server
 ```
 
-## ASTRA: synthesising the environment
+## **ASTRA: synthesising the environment**
 
 ASTRA solves the part nobody wants to build: a realistic tool environment with a deterministic reward. Its pipeline has two halves.
 
@@ -82,7 +82,7 @@ The training methodology is SFT to establish tool-calling behaviour and multi-tu
 
 The released models are `ASTRA-14B-Thinking-v1` (from Qwen3-14B) and `ASTRA-32B-Thinking-v1` (from Qwen3-32B), with the full pipeline, environments and models published [97][98].
 
-## CM2: checklist rewards for open-ended tasks
+## **CM2: checklist rewards for open-ended tasks**
 
 CM2 targets the case where you cannot write a verifier at all. Instead of replacing outcome rewards with checklists, it decomposes each turn's intended behaviour into fine-grained binary criteria with explicit evidence grounding and structured metadata, turning open-ended judging into stable classification-style decisions.
 
@@ -92,7 +92,7 @@ Measured from an 8B base model trained on an 8K-example RL dataset, CM2 improves
 
 For a learner, the transferable lesson is narrower than the framework: when you cannot verify an outcome, write the rubric first, decompose it into binary checks with evidence attached, and reward only the checks you are confident about.
 
-## Orchestrator and frozen sub-agents
+## **Orchestrator and frozen sub-agents**
 
 The pattern the source document observed in deployed frontier models, and the one Anthropic's agentic research roles now describe as their core problem, is decomposition rather than depth.
 
@@ -109,7 +109,7 @@ The idea: train an **orchestrator** with RL to decompose a task and delegate to 
 
 Two engineering consequences. The sub-agents stay frozen, so you can reuse a single set of specialist models for many orchestrator runs, and the orchestration policy is a much smaller training problem than end-to-end agent capability. The cost is a context-budget problem: the orchestrator's context must hold every sub-agent's report, so delegation granularity becomes a first-class hyperparameter rather than a prompt detail.
 
-## Doing it inside TRL
+## **Doing it inside TRL**
 
 TRL 1.17.1 grew an environment-driven mode that makes a local version of this possible without a separate framework: `GRPOTrainer` accepts an `environment_factory` instead of a `train_dataset`, in which case the environment owns the prompt generation and the trainer drives `max_steps` rounds of reset/step [103].
 
@@ -131,7 +131,7 @@ training_args = GRPOConfig(
 
 The `environment_factory` contract is simple: each row of the dataset routes to one environment for the rollout, and the environment returns the prompt, the tool observations, and the final reward. That is the seam where ASTRA-style synthesised environments, a real MCP server, or a simulator plugs in.
 
-## Agent evaluation
+## **Agent evaluation**
 
 An agent that scores better on a similarity metric is not necessarily better. The current benchmark set, and what each one measures:
 
@@ -152,7 +152,7 @@ A practical evaluation protocol for agent work:
 4. Re-run each configuration at least three times. Agent variance is high enough that a single run is noise.
 5. Keep a fixed judge model and a fixed judge prompt. Changing the judge between runs silently changes the metric.
 
-## Agentic fine-tuning pre-flight checklist
+## **Agentic fine-tuning pre-flight checklist**
 
 - [ ] The environment is implemented and runs standalone, with a deterministic seed.
 - [ ] The reward is verifiable, or decomposed into binary criteria with evidence attached.

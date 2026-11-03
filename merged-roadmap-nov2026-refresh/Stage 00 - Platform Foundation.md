@@ -1,10 +1,9 @@
-# Stage 00 — Platform Foundation
+# **Stage 00 — Platform Foundation**
 
-**Weeks:** 1–4 (complete)
 **Libraries:** `huggingface_hub` 2.4.0 · `datasets` 5.1.0
 **Outcome:** authenticate, move artifacts in both directions, and own a dataset end to end without touching a GPU.
 
-## HuggingFace Hub and `huggingface_hub` 2.4.0
+## **HuggingFace Hub and `huggingface_hub` 2.4.0**
 
 The Hub is the GitHub of ML: models, datasets, Spaces, and Jobs. `huggingface_hub` is the Python and CLI client. Version 2 moved the HTTP stack to **httpx2/httpcore2**, requires **Python ≥3.10**, and renamed a batch of CLI subcommands and Python functions [3][24].
 
@@ -97,7 +96,7 @@ hf skills list
 hf skills update -g
 ```
 
-## Datasets 5.1.0
+## **Datasets 5.1.0**
 
 The data layer. Built on Apache Arrow, so large datasets are memory-mapped from disk instead of loaded into RAM. Version 5 is the current line; loading scripts and `trust_remote_code` remain removed, `ds["col"]` still returns a lazy `Column`, `Sequence` remains replaced by `List`, and audio/video decoding goes through torchcodec [4][5].
 
@@ -230,8 +229,8 @@ ds.shuffle(seed=42, buffer_size=10_000)
 
 Streaming returns an `IterableDataset` supporting `map`, `filter`, `shuffle`, `take`, `skip`, and `interleave_datasets`. To keep a subset, build a regular `Dataset` from it with `Dataset.from_generator`.
 
-> [!warning] datasets 5.x shuffle default changed
-> Streaming `shuffle()` now defaults to `buffer_size=1000` and `max_buffer_input_shards=10`. A training run that "shuffles differently" after the upgrade is usually this, not a seeding bug. Pass explicit `buffer_size` if reproducibility matters.
+datasets 5.x shuffle default changed
+Streaming `shuffle()` now defaults to `buffer_size=1000` and `max_buffer_input_shards=10`. A training run that "shuffles differently" after the upgrade is usually this, not a seeding bug. Pass explicit `buffer_size` if reproducibility matters.
 
 **Agent traces.** datasets 5.x adds first-class loading of agent traces (tool-call conversations harvested from coding agents) into a normalized `messages` schema, built on the `teich` package pinned at 0.1.5 in the 5.1.0 metadata. This is the data substrate for agent-behavior SFT and is the natural bridge between Stage 3 and Stage 5 [5].
 
@@ -259,14 +258,14 @@ pip install -U datasets
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 0 is the floor everything else stands on. It covers the two libraries that define how models and data are named, versioned, moved, and found. Nothing in Stages 1–8 makes sense if the Hub client is wrong, because every model reference in every later stage is a Hub path.
 
 **Exit criterion:** you can create a dataset repo, publish a versioned release, restore it on a clean machine, and explain every token in `hf auth whoami` output.
 
-## Environment
+## **Environment**
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Python >= 3.11 for the full stack
 pip install -U huggingface_hub datasets accelerate
@@ -277,7 +276,7 @@ pip list | grep -i -E "huggingface|datasets|accelerate"
 
 ---
 
-### Authentication
+### **Authentication**
 - [ ] `login()` — programmatic
 - [ ] `notebook_login()` — Jupyter widget
 - [ ] `interpreter_login()` — force a terminal prompt (use this in CI or containers)
@@ -288,7 +287,7 @@ pip list | grep -i -E "huggingface|datasets|accelerate"
 - [ ] Fine-grained tokens versus read/write tokens — scope each project to the least access it needs
 - [ ] Reading the token type list programmatically (`HfApi().whoami()`)
 
-### Downloading
+### **Downloading**
 - [ ] `hf_hub_download()` for a single file
 - [ ] `snapshot_download()` for an entire repo
 - [ ] Specific revisions and branches (`revision="main"`, a commit SHA, a tag)
@@ -299,7 +298,7 @@ pip list | grep -i -E "huggingface|datasets|accelerate"
 - [ ] Cache location controlled by `HF_HOME`
 - [ ] Fast transfers through `hf_xet` automatically (the old `hf_transfer` is gone)
 
-### Uploading
+### **Uploading**
 - [ ] `upload_file()` for a single file
 - [ ] `upload_folder()` for a directory
 - [ ] `CommitOperationAdd` for atomic multi-file commits
@@ -307,7 +306,7 @@ pip list | grep -i -E "huggingface|datasets|accelerate"
 - [ ] Ignoring files during upload (`ignore_patterns`)
 - [ ] CLI: `hf upload` (v2 renamed `hf upload-large-folder`; the storage flag is now `--volume`)
 
-### Repository management
+### **Repository management**
 - [ ] `create_repo()` for model, dataset, and space types
 - [ ] `delete_repo()`
 - [ ] Listing/searching: `list_models()` → `search_models()`, `list_datasets()`, `list_spaces()`
@@ -315,16 +314,16 @@ pip list | grep -i -E "huggingface|datasets|accelerate"
 - [ ] `repo_exists()`
 - [ ] `duplicate_space()` → `duplicate_repo()`
 
-### Spaces management (API only)
+### **Spaces management (API only)**
 - [ ] `get_space_runtime()`
 - [ ] `pause_space()`, `restart_space()`
 - [ ] Space hardware management through `huggingface_hub`
 
-### Error handling
+### **Error handling**
 - [ ] Catch `HfHubHTTPError` and subclasses: `GatedRepoError`, `RepositoryNotFoundError`, `RevisionNotFoundError`
 - [ ] Never catch `requests` exceptions — the library moved to httpx and your handler will never fire
 
-### CLI v2 surface
+### **CLI v2 surface**
 - [ ] `hf auth login` / `hf auth whoami`
 - [ ] `hf download <repo> --revision <sha> --include "*.safetensors"`
 - [ ] `hf upload <repo> <path> --exclude "*.pyc"`
@@ -335,7 +334,7 @@ pip list | grep -i -E "huggingface|datasets|accelerate"
 
 ---
 
-### Atomic multi-file release
+### **Atomic multi-file release**
 A release is one commit containing several files. If you upload file-by-file, a reader can observe a half-written repo.
 
 ```python
@@ -360,7 +359,7 @@ commit = api.create_commit(
 print(commit.oid)
 ```
 
-### Gated repos, handled properly
+### **Gated repos, handled properly**
 ```python
 from huggingface_hub import hf_hub_download, GatedRepoError, HfHubHTTPError
 
@@ -373,7 +372,7 @@ except HfHubHTTPError as e:
     print(f"Hub error {e.response.status_code}: {e.response.text[:200]}")
 ```
 
-### Snapshot with filters and an explicit revision
+### **Snapshot with filters and an explicit revision**
 ```python
 from huggingface_hub import snapshot_download
 
@@ -386,7 +385,7 @@ path = snapshot_download(
 )
 ```
 
-### Space lifecycle
+### **Space lifecycle**
 ```python
 from huggingface_hub import HfApi
 
@@ -396,7 +395,7 @@ api.pause_space("username/my-space")
 api.restart_space("username/my-space")
 ```
 
-### Token hygiene
+### **Token hygiene**
 ```python
 import os
 from huggingface_hub import login, whoami, logout
@@ -411,7 +410,7 @@ logout()
 
 ---
 
-### Loading — all sources
+### **Loading — all sources**
 - [ ] `load_dataset()` from the Hub
 - [ ] Loading with configs and subsets (`load_dataset("repo", "config_name")`)
 - [ ] Loading specific splits
@@ -426,13 +425,13 @@ logout()
 - [ ] Why dataset scripts no longer load, and how to find or make a Parquet version
 - [ ] **Agent traces**: loading tool-call traces from datasets 5.x into a normalized `messages` schema
 
-### Inspecting
+### **Inspecting**
 - [ ] `features`, `column_names`, `shape`, `num_rows`, `num_columns`
 - [ ] Accessing rows by index, by slice, and by column name
 - [ ] Materializing a lazy `Column` with `list()`
 - [ ] Iterating over rows
 
-### Row operations
+### **Row operations**
 - [ ] `sort()` ascending and descending
 - [ ] `shuffle()` with a seed for reproducibility
 - [ ] `select()` by index list
@@ -441,7 +440,7 @@ logout()
 - [ ] `train_test_split()` by proportion or absolute count, and stratified by column
 - [ ] `shard()` into N chunks
 
-### Column operations
+### **Column operations**
 - [ ] `rename_column()`, `rename_columns()`
 - [ ] `remove_columns()`, `add_column()`
 - [ ] `cast_column()`
@@ -450,11 +449,11 @@ logout()
 - [ ] Feature schema with `Value`, `ClassLabel`, `List`, `Image`, `Audio`
 - [ ] `align_labels_with_mapping()`
 
-### Transformation
+### **Transformation**
 - [ ] `map()` row by row, `batched=True`, `num_proc`, `remove_columns`, adding columns, generating multiple rows from one
 - [ ] `with_transform()` and `with_format()`
 
-### Combining, exporting, formatting
+### **Combining, exporting, formatting**
 - [ ] `concatenate_datasets()` — stack vertically
 - [ ] `interleave_datasets()` with probabilities and seed
 - [ ] `to_pandas()`, `to_dict()`, `to_list()`, `to_csv()`, `to_json()`, `to_parquet()`
@@ -463,7 +462,7 @@ logout()
 - [ ] Reading the underlying Arrow table through `ds.data`
 - [ ] `set_format("torch" | "numpy" | "pandas")` and `reset_format()`
 
-### Saving and pushing
+### **Saving and pushing**
 - [ ] `save_to_disk()` / `load_from_disk()`, including `DatasetDict`
 - [ ] `push_to_hub()` for a dataset and for a specific split
 - [ ] `DatasetDict.push_to_hub()` for all splits at once
@@ -471,7 +470,7 @@ logout()
 - [ ] Private versus public datasets
 - [ ] Dataset cards and README metadata
 
-### Streaming
+### **Streaming**
 - [ ] `streaming=True` without downloading the whole dataset
 - [ ] `map()`, `filter()`, `shuffle(buffer_size=...)` on streams
 - [ ] `take()` and `skip()` on streams
@@ -480,7 +479,7 @@ logout()
 
 ---
 
-## Code — dataset operations
+## **Code — dataset operations**
 ```python
 from datasets import load_dataset, Dataset, concatenate_datasets, interleave_datasets
 
@@ -519,7 +518,7 @@ stream = mixed.to_iterable_dataset()
 print(stream.data.num_rows if hasattr(stream, "data") else "stream")
 ```
 
-### Streaming with explicit buffers
+### **Streaming with explicit buffers**
 ```python
 ds = load_dataset("allenai/c4", "en", split="train", streaming=True)
 
@@ -533,7 +532,7 @@ for ex in ds.skip(1000).take(10):
 ds = ds.shuffle(seed=42, buffer_size=10_000)
 ```
 
-### Agent traces
+### **Agent traces**
 ```python
 # datasets 5.x normalizes agent tool-call traces into a `messages` schema.
 # The loader is built on the `teich` package (0.1.5 in the 5.1.0 metadata).
@@ -548,43 +547,43 @@ Audit the harness terms before training on donated traces: the data may be anony
 
 ---
 
-### Lab 0-1 — Authentication matrix (0.5 day)
+### **Lab 0-1 — Authentication matrix**
 - Log in five different ways and record what each produces.
 - Create a read-only token and a read-write token; prove the read-only one fails on `upload_file`.
 - Implement `interpreter_login()` fallback in a container without a browser.
 - Verify `HF_TOKEN` works with no interactive input.
 
-### Lab 0-2 — Gated and private repos (0.5 day)
+### **Lab 0-2 — Gated and private repos**
 - Attempt to download a gated model without access; catch `GatedRepoError`.
 - Accept the licence, then download with a token that has the grant.
 - Create a private repo, upload, and verify it is invisible to an unauthenticated client.
 
-### Lab 0-3 — Atomic release (1 day)
+### **Lab 0-3 — Atomic release**
 - Build a small model directory (config, weights, tokenizer, README).
 - Push it with a single `create_commit` containing four `CommitOperationAdd` operations.
 - Clone it back with `snapshot_download` and diff the tree.
 - Tag a release and pin `revision=` to the tag.
 
-### Lab 0-4 — Space lifecycle (0.5 day)
+### **Lab 0-4 — Space lifecycle**
 - Deploy a Gradio Space, then pause, restart, and read `get_space_runtime()`.
 - Change hardware programmatically through `huggingface_hub`.
 - Record what the runtime object reports about state and hardware.
 
-### Lab 0-5 — Datasets operation sweep (1 day)
+### **Lab 0-5 — Datasets operation sweep**
 - Load the same content from CSV, JSONL, Parquet, and a text file; compare `features`.
 - Run every row operation and every column operation from the checklist.
 - Convert to Polars and back; confirm `ds.data` gives you the Arrow table.
 - Stream a multi-shard dataset, shuffle with an explicit buffer, and materialize a subset.
 - Load an agent-trace dataset and inspect the `messages` schema.
 
-### Lab 0-6 — Hub Skills (0.5 day)
+### **Lab 0-6 — Hub Skills**
 - `hf skills add hf-cli --global`, then `hf skills list`.
 - Have a coding agent perform a Hub task using the skill, and check it used current CLI syntax rather than `huggingface-cli`.
 - Run `hf skills update -g` and confirm the version stamp moves.
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **`huggingface-cli` is gone.** Any tutorial that starts with it is pre-2025. Use `hf`.
 - **`hf repo` is now `hf repos`**, and `hf repo-files delete` is `hf repos delete-files`. Silent "unknown command" errors are renames, not a broken install.
 - **`trust_remote_code` is a red flag on any repo you did not write.** It executes code from the remote repository.
@@ -596,7 +595,7 @@ Audit the harness terms before training on donated traces: the data may be anony
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] Every authentication method from the checklist works and is documented.
 - [ ] A multi-file release lands in one commit and restores byte-identically on a clean machine.
 - [ ] A gated repo is downloaded successfully after the licence is accepted.
@@ -606,7 +605,7 @@ Audit the harness terms before training on donated traces: the data may be anony
 
 ---
 
-## Resources
+## **Resources**
 - Hub CLI guide — https://huggingface.co/docs/hub/en/guides/cli
 - Hub Agent Skills — https://huggingface.co/docs/hub/en/agents-skills
 - CLI for AI Agents — https://huggingface.co/docs/hub/agents-cli.md

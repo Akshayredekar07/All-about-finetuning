@@ -1,13 +1,12 @@
-# Stage 06 — Frameworks at Scale
+# **Stage 06 — Frameworks at Scale**
 
-**Weeks:** 23
 **Frameworks:** Unsloth · Axolotl 0.21.1 · LlamaFactory 0.9.5 · TRL 1.17.1 · PEFT 0.21.2 · TorchTitan 0.4.0 · verl 0.9.1 · OpenRLHF 0.11.2 · SkyRL 0.4.0 · Tinker 0.37.0
 **Outcome:** express the same training job as configuration or as code, and pick the right engine for the hardware you actually have.
 
-> [!warning] The "six-way race" is now five plus three
-> The source notes listed Axolotl, Unsloth, LlamaFactory, TRL, PEFT, and TorchTune. **TorchTune's last release was 0.6.1 in April 2025** and the project is unmaintained [10]. The meta-framework slot is now **TorchTitan 0.4.0** (with the TitanRL line) [11], and the RL-engine slot is split across **verl 0.9.1** [12], **OpenRLHF 0.11.2** [13], **SkyRL 0.4.0** [35], and the hosted **Tinker API 0.37.0** [36]. Building new work on TorchTune in November 2026 is a dead end.
+The "six-way race" is now five plus three
+The source notes listed Axolotl, Unsloth, LlamaFactory, TRL, PEFT, and TorchTune. **TorchTune's last release was 0.6.1 in April 2025** and the project is unmaintained [10]. The meta-framework slot is now **TorchTitan 0.4.0** (with the TitanRL line) [11], and the RL-engine slot is split across **verl 0.9.1** [12], **OpenRLHF 0.11.2** [13], **SkyRL 0.4.0** [35], and the hosted **Tinker API 0.37.0** [36]. Building new work on TorchTune in November 2026 is a dead end.
 
-## Framework decision table
+## **Framework decision table**
 
 Pick by hardware and scale first, then by method.
 
@@ -41,7 +40,7 @@ Pick by hardware and scale first, then by method.
 | Tinker | 0.37.0 | 2 Nov 2026 | Hosted LoRA/fine-tuning API |
 | AgentLightning | 1.0.2 | 29 Sep 2026 | Agent RL orchestration [37] |
 
-## Unsloth — single-GPU training
+## **Unsloth — single-GPU training**
 
 Hand-written Triton kernels for LoRA/QLoRA training, a drop-in replacement for the HF stack on supported models [59].
 
@@ -92,7 +91,7 @@ trainer.train()
 
 **Avoid it for:** multi-GPU (its documented weak point); models outside the supported list; TRL/PEFT features that Unsloth has not caught up with.
 
-## Axolotl — multi-GPU configuration layer
+## **Axolotl — multi-GPU configuration layer**
 
 YAML-driven wrapper over Transformers, PEFT, TRL, Accelerate, DeepSpeed. The most feature-complete framework [8].
 
@@ -154,7 +153,7 @@ accelerate launch -m axolotl.cli.train axolotl_config.yml
 
 **Avoid it for:** a single consumer GPU (Unsloth is faster); custom code (the wrapper is thick); GUI workflows.
 
-## LlamaFactory — web UI and security constraints
+## **LlamaFactory — web UI and security constraints**
 
 ACL 2024 system demo paper turned production framework [17]. 100+ model architectures (LLMs and VLMs), a LlamaBoard web UI, multiple backends (Transformers, Liger Kernel, Unsloth, Megatron-LM, KTransformers), and OFT support.
 
@@ -175,12 +174,12 @@ llamafactory-cli train \
   --learning_rate 5e-5
 ```
 
-> [!danger] CVE-2026-58116 — do not expose the WebUI
-> LLaMA-Factory through 0.9.5 contains a **remote code execution** vulnerability (CVSS-B 9.3, Critical): the WebUI passes a user-supplied model path unvalidated into `AutoTokenizer.from_pretrained()` / `AutoModel.from_pretrained()` with a hardcoded `trust_remote_code=True`, so a malicious model repo executes arbitrary code with the server process's privileges. NVD lists **no patched version** for 0.9.5 [15][16]. An earlier RCE through the `vhead_file` checkpoint path was fixed in 0.9.4 by loading with `weights_only=True` [38]. The vendor's advisory list also carries an SSRF guard-bypass issue (CVE-2026-85673) [38].
->
-> Operational rule: use LlamaFactory **CLI-only, on localhost, with no inbound exposure**, or do not use it at all until a patched release lands. `llamafactory-cli webui` binds a server that must never face a network.
+CVE-2026-58116 — do not expose the WebUI
+LLaMA-Factory through 0.9.5 contains a **remote code execution** vulnerability (CVSS-B 9.3, Critical): the WebUI passes a user-supplied model path unvalidated into `AutoTokenizer.from_pretrained()` / `AutoModel.from_pretrained()` with a hardcoded `trust_remote_code=True`, so a malicious model repo executes arbitrary code with the server process's privileges. NVD lists **no patched version** for 0.9.5 [15][16]. An earlier RCE through the `vhead_file` checkpoint path was fixed in 0.9.4 by loading with `weights_only=True` [38]. The vendor's advisory list also carries an SSRF guard-bypass issue (CVE-2026-85673) [38].
 
-## TRL — trainer primitives
+Operational rule: use LlamaFactory **CLI-only, on localhost, with no inbound exposure**, or do not use it at all until a patched release lands. `llamafactory-cli webui` binds a server that must never face a network.
+
+## **TRL — trainer primitives**
 
 HuggingFace's RL and preference-optimization library, and the canonical reference implementation [6][7]. Other frameworks call into it.
 
@@ -226,7 +225,7 @@ trainer.train()
 
 **Avoid it for:** one-click setups (LlamaFactory's GUI), or maximum single-GPU speed (Unsloth) and maximum multi-GPU control (Axolotl).
 
-## PEFT — adapter formats
+## **PEFT — adapter formats**
 
 The adapter standard [9]. Almost every other framework calls into it, and the format is what makes multi-LoRA serving possible.
 
@@ -241,13 +240,13 @@ A LoRA trained with Axolotl loads directly in vLLM, SGLang, TGI, TensorRT-LLM, a
 
 **Avoid it for:** full fine-tuning (use TRL/Transformers directly); adapter methods PEFT does not implement.
 
-## TorchTitan and the RL engines
+## **TorchTitan and the RL engines**
 
 **TorchTitan 0.4.0** is Meta's maintained PyTorch-native path: native `torch.compile`, DTensor, FSDP2, with the TitanRL line for post-training research. It replaced TorchTune as the "PyTorch-native option" in the source notes, and it is the frame to use for large-scale pretraining or post-training research where the vanilla HF stack is not enough [11].
 
 **verl 0.9.1** is a trainer-agnostic RL engine with strong support for PPO, GRPO, and multi-turn agent rollouts, and is the usual choice when you need PPO back or deep rollout control [12]. **OpenRLHF 0.11.2** covers the same ground with Ray-based scaling and a PPO/REINFORCE++ focus [13]. **SkyRL 0.4.0** targets agent RL end to end and can drive a local Tinker-compatible backend [35]. **Tinker 0.37.0** is a hosted API for LoRA training and RL against remote models — attractive when you have no GPUs but a budget [36]. **AgentLightning 1.0.2** sits above the trainers to orchestrate agent RL with credit assignment across steps [37].
 
-## Training quantization — bitsandbytes 0.50.2
+## **Training quantization — bitsandbytes 0.50.2**
 
 The library that makes QLoRA possible: 4-bit (NF4, FP4) and 8-bit weight quantization with minimal quality loss [39].
 
@@ -262,7 +261,7 @@ The library that makes QLoRA possible: 4-bit (NF4, FP4) and 8-bit weight quantiz
 - `prepare_model_for_kbit_training()` before attaching PEFT adapters
 - 8-bit optimizers: `bnb.optim.Adam8bit`, `bnb.optim.AdamW8bit`, paged variants `paged_adamw_8bit` / `paged_adamw_32bit`, and `optim="paged_adamw_8bit"` in `TrainingArguments`
 
-## Distributed training
+## **Distributed training**
 
 **Accelerate** — the standard launch tool; `accelerate config`, `accelerate launch`; works with TRL, PEFT, Axolotl, LlamaFactory.
 
@@ -278,23 +277,23 @@ The library that makes QLoRA possible: 4-bit (NF4, FP4) and 8-bit weight quantiz
 | 16+ GPUs, multi-node | FSDP2 + TP, or DeepSpeed + TP, or Megatron-LM through the LlamaFactory backend |
 | MoE models | EP + TP combo |
 
-## Framework labs
+## **Framework labs**
 
-**Lab 1 — Train the same model with three frameworks (1–2 days).** Pick a small model (Qwen3-4B-Instruct-2507, Gemma 4 E2B, or Qwen3.5-4B); train SFT with Unsloth, TRL, and Axolotl on the same data with matched hyperparameters; compare training time, peak memory, final loss, and eval scores.
+**Lab 1 — Train the same model with three frameworks.** Pick a small model (Qwen3-4B-Instruct-2507, Gemma 4 E2B, or Qwen3.5-4B); train SFT with Unsloth, TRL, and Axolotl on the same data with matched hyperparameters; compare training time, peak memory, final loss, and eval scores.
 
-**Lab 2 — DPO with TRL (1 day).** Take the Lab 1 SFT checkpoint; train DPO on UltraFeedback or a subset with `DPOTrainer`; evaluate on IFEval, your domain eval, and a capability regression set.
+**Lab 2 — DPO with TRL.** Take the Lab 1 SFT checkpoint; train DPO on UltraFeedback or a subset with `DPOTrainer`; evaluate on IFEval, your domain eval, and a capability regression set.
 
-**Lab 3 — GRPO with TRL (1–2 days).** Take the SFT checkpoint; set up GRPO on GSM8K or your math domain; define a verifiable reward (`\boxed{}` answer match); train; evaluate on the held-out test set.
+**Lab 3 — GRPO with TRL.** Take the SFT checkpoint; set up GRPO on GSM8K or your math domain; define a verifiable reward (`\boxed{}` answer match); train; evaluate on the held-out test set.
 
-**Lab 4 — Multi-LoRA serving (1 day).** Train three LoRA adapters on different tasks; serve with vLLM `--enable-lora`; hot-swap between adapters per request; measure latency, throughput, and memory.
+**Lab 4 — Multi-LoRA serving.** Train three LoRA adapters on different tasks; serve with vLLM `--enable-lora`; hot-swap between adapters per request; measure latency, throughput, and memory.
 
-**Lab 5 — Full pipeline, LoRA → merge → quantize → vLLM (1–2 days).** Train LoRA; merge the adapter into the base; quantize to INT4; serve with vLLM; benchmark TTFT, TPOT, and throughput against the FP16 base on identical hardware.
+**Lab 5 — Full pipeline, LoRA → merge → quantize → vLLM.** Train LoRA; merge the adapter into the base; quantize to INT4; serve with vLLM; benchmark TTFT, TPOT, and throughput against the FP16 base on identical hardware.
 
-**Lab 6 — Edge deployment (1 day).** Train a LoRA on a small model; merge and convert to GGUF Q4_K_M; serve with llama.cpp or Ollama; deploy on a phone or laptop.
+**Lab 6 — Edge deployment.** Train a LoRA on a small model; merge and convert to GGUF Q4_K_M; serve with llama.cpp or Ollama; deploy on a phone or laptop.
 
-## Framework-specific constraints that will break your run
+## **Framework-specific constraints that will break your run**
 
-### Unsloth: the Qwen3.5 / Qwen3.8 4-bit restriction
+### **Unsloth: the Qwen3.5 / Qwen3.8 4-bit restriction**
 
 Unsloth's own documentation states plainly that QLoRA at 4-bit is **not recommended for the Qwen3.5 models, dense or MoE, because of higher-than-normal quantization differences**. Two separate mechanisms are behind this. The first is empirical: the family's hybrid Gated DeltaNet attention quantises worse than standard attention at 4-bit. The second is structural: bitsandbytes has no 4-bit `nn.Parameter` path for MoE experts, so MoE QLoRA is not merely discouraged but blocked.
 
@@ -302,19 +301,19 @@ The documented bf16 LoRA footprints are 3 GB (0.8B), 5 GB (2B), 10 GB (4B), 22 G
 
 Two more Unsloth details worth knowing before you commit an afternoon to it. Qwen3.5 and Qwen3.8 share the `qwen3_5` architecture, so they use the Qwen3.5 RL path and you must **disable fast vLLM inference** (`fast_inference=False`) for models vLLM cannot serve. And the MXFP4 quant builds were retired before 27 February, so anything you cached locally needs re-downloading.
 
-### TRL: the Mistral Large 4 LoRA example
+### **TRL: the Mistral Large 4 LoRA example**
 
 TRL 1.17.0 added a working LoRA SFT example for `mistralai/Mistral-Large-4-1T-A52B` on a single 8×B300 node over FP8 weights. It requires `transformers>=5.22.0`, `peft>=0.21.0` and `accelerate>=1.15.0` [6]. That requirement is the reason the engine pin matrix exists: the serving side cannot use the same `transformers` version, so the adapter file is the only thing that crosses between environments.
 
-### Axolotl: a separate interpreter
+### **Axolotl: a separate interpreter**
 
 Axolotl 0.21.1 requires **Python ≥3.12**, while the rest of the stack runs on 3.11. Keep it in its own virtual environment; a shared environment will fail at install, not at run time, which is the better of the two failure modes.
 
-### TGI: archived, not merely in maintenance mode
+### **TGI: archived, not merely in maintenance mode**
 
 The `text-generation-inference` repository was **archived by its owner on 21 March 2026** and is read-only [115]. Models released after that date fail TGI health checks, and Hugging Face's own inference documentation now points new deployments at vLLM or SGLang. TGI remains in the framework table as historical context and as a source of the API conventions it invented, but it is never the answer to "which engine should I run".
 
-## Unsloth GRPO configuration
+## **Unsloth GRPO configuration**
 
 Unsloth's `GRPOConfig` exposes the same knobs as TRL, plus a fast-path switch:
 
@@ -338,7 +337,7 @@ The `loss_type` values Unsloth exposes are `grpo`, `dr_grpo`, `dapo`, `bnpo` and
 
 Note the asymmetry carefully: TRL 1.17.1 does not accept `loss_type="gspo"`, but Unsloth's patched trainer does. Use the TRL spelling (`importance_sampling_level="sequence"` + `loss_type="grpo"`) in shared code and switch only in the Unsloth notebook.
 
-## Framework selection rules that survive
+## **Framework selection rules that survive**
 
 1. **Single consumer GPU:** Unsloth, always. The alternative is fighting your own memory allocator.
 2. **Multi-GPU production pipeline:** Axolotl, in its own Python 3.12 environment, with the config committed to the repository.
@@ -347,7 +346,7 @@ Note the asymmetry carefully: TRL 1.17.1 does not accept `loss_type="gspo"`, but
 5. **RL at scale:** verl, OpenRLHF or SkyRL, not a training framework with an RL shim. Unsloth is the exception, and it is a good one for single-node RL.
 6. **TPU clusters:** Tunix. Pointer only — it was not re-verified against a primary source in this refresh.
 
-## Framework pre-flight checklist
+## **Framework pre-flight checklist**
 
 - [ ] For each of Unsloth, Axolotl, LlamaFactory, TRL, PEFT, TorchTitan: state the best use case.
 - [ ] When does Unsloth win? When does it lose?
@@ -365,18 +364,18 @@ Note the asymmetry carefully: TRL 1.17.1 does not accept `loss_type="gspo"`, but
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 5 is about leverage. The Stage 3 code works; Stage 5 makes it cheap enough to iterate, and tells you what to reach for when you outgrow one GPU.
 
 **Exit criterion:** one model trained three ways with the data held constant, and a written framework decision rule you can defend.
 
 ---
 
-## The landscape
-> [!warning] The source notes' "six-way race" no longer holds
-> The original list was Axolotl, Unsloth, LlamaFactory, TRL, PEFT, and TorchTune. **TorchTune's last release was 0.6.1 in April 2025 and the project is unmaintained.** Starting new work on it in November 2026 is a dead end. The meta-framework slot is now **TorchTitan**, and the RL-engine slot is split across **verl**, **OpenRLHF**, **SkyRL**, and the hosted **Tinker** API.
+## **The landscape**
+The source notes' "six-way race" no longer holds
+The original list was Axolotl, Unsloth, LlamaFactory, TRL, PEFT, and TorchTune. **TorchTune's last release was 0.6.1 in April 2025 and the project is unmaintained.** Starting new work on it in November 2026 is a dead end. The meta-framework slot is now **TorchTitan**, and the RL-engine slot is split across **verl**, **OpenRLHF**, **SkyRL**, and the hosted **Tinker** API.
 
 | Framework | Current release | Date | Best for | License | Learning curve |
 |---|---|---|---|---|---|
@@ -397,7 +396,7 @@ Stage 5 is about leverage. The Stage 3 code works; Stage 5 makes it cheap enough
 
 ---
 
-## Decision table
+## **Decision table**
 | Situation | Framework | Why |
 |---|---|---|
 | Single consumer GPU (RTX 4090, 3090) | Unsloth | 2–5× faster, lowest memory, longest context |
@@ -426,7 +425,7 @@ flowchart TD
 
 ---
 
-### Unsloth
+### **Unsloth**
 - [ ] Hand-written Triton kernels replacing HF's LoRA/QLoRA path
 - [ ] ~2× speedup on supported models, 30–50% memory reduction
 - [ ] Automatic 4-bit quantization (NF4 + double quant)
@@ -437,7 +436,7 @@ flowchart TD
 - [ ] Known weak spot: multi-GPU
 - [ ] Known limit: a model outside the supported list, or a TRL feature Unsloth has not implemented
 
-### Axolotl
+### **Axolotl**
 - [ ] YAML-driven wrapper over Transformers, PEFT, TRL, Accelerate, DeepSpeed
 - [ ] FSDP2, DeepSpeed ZeRO-2/3, TP, CP, EP composable via DeviceMesh
 - [ ] One config file for every hyperparameter
@@ -446,7 +445,7 @@ flowchart TD
 - [ ] `accelerate launch -m axolotl.cli.train axolotl_config.yml`
 - [ ] Limits: single consumer GPU (Unsloth is faster), custom code (thick wrapper)
 
-### LlamaFactory
+### **LlamaFactory**
 - [ ] LlamaBoard web UI and the CLI
 - [ ] 100+ model architectures
 - [ ] Backends: Transformers, Liger Kernel, Unsloth, Megatron-LM, KTransformers
@@ -454,18 +453,18 @@ flowchart TD
 - [ ] OFT support
 - [ ] **The CVE rule: CLI only, localhost only, never exposed**
 
-### TRL
+### **TRL**
 - [ ] SFT, DPO, Reward, RLOO, GRPO, Distillation as stable trainers
 - [ ] Experimental trainers under `trl.experimental`
 - [ ] `trl vllm-serve` for fast rollout generation
 - [ ] Direct trainer access with no wrapper overhead
 
-### PEFT
+### **PEFT**
 - [ ] The adapter file format: `adapter_config.json` + `adapter_model.safetensors`
 - [ ] Portability across Axolotl, vLLM, SGLang, TensorRT-LLM
 - [ ] Adapter swapping without reloading the base model
 
-### TorchTitan and the RL engines
+### **TorchTitan and the RL engines**
 - [ ] TorchTitan: native `torch.compile`, DTensor, FSDP2, TitanRL
 - [ ] verl: trainer-agnostic, PPO and GRPO, multi-turn agent rollouts
 - [ ] OpenRLHF: Ray-based scaling, PPO and REINFORCE++
@@ -473,7 +472,7 @@ flowchart TD
 - [ ] Tinker: hosted LoRA and RL API
 - [ ] AgentLightning: agent RL orchestration with credit assignment
 
-### Distributed training
+### **Distributed training**
 - [ ] Accelerate as the launcher
 - [ ] DeepSpeed ZeRO-1/2/3 and what each shards
 - [ ] FSDP2 and DTensor
@@ -489,7 +488,7 @@ flowchart TD
 
 ---
 
-### Unsloth
+### **Unsloth**
 ```python
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
@@ -517,7 +516,7 @@ trainer = SFTTrainer(
 trainer.train()
 ```
 
-### Axolotl
+### **Axolotl**
 ```yaml
 # axolotl_config.yml
 base_model: Qwen/Qwen3-4B-Instruct-2507
@@ -564,7 +563,7 @@ output_dir: ./outputs/qlora
 accelerate launch -m axolotl.cli.train axolotl_config.yml
 ```
 
-### LlamaFactory (CLI only)
+### **LlamaFactory (CLI only)**
 ```bash
 pip install llamafactory
 llamafactory-cli train \
@@ -581,12 +580,12 @@ llamafactory-cli train \
   --learning_rate 5e-5
 ```
 
-> [!danger] CVE-2026-58116 — the WebUI is a remote-code-execution surface
-> LLaMA-Factory through 0.9.5 contains a **remote code execution** vulnerability (CVSS-B 9.3, Critical). The WebUI passes a user-supplied model path unvalidated into `AutoTokenizer.from_pretrained()` / `AutoModel.from_pretrained()` with a hardcoded `trust_remote_code=True`, so a malicious model repository executes arbitrary code with the server process's privileges. NVD lists **no patched version** for 0.9.5. An earlier RCE through the `vhead_file` checkpoint path was fixed in 0.9.4 by loading with `weights_only=True`, and the vendor's advisory list also carries an SSRF guard-bypass issue (CVE-2026-85673).
->
-> Operational rule: **CLI only, bound to localhost, never exposed to a network.** If you need a GUI, put it behind an authenticating proxy on a private interface — or pick another framework.
+CVE-2026-58116 — the WebUI is a remote-code-execution surface
+LLaMA-Factory through 0.9.5 contains a **remote code execution** vulnerability (CVSS-B 9.3, Critical). The WebUI passes a user-supplied model path unvalidated into `AutoTokenizer.from_pretrained()` / `AutoModel.from_pretrained()` with a hardcoded `trust_remote_code=True`, so a malicious model repository executes arbitrary code with the server process's privileges. NVD lists **no patched version** for 0.9.5. An earlier RCE through the `vhead_file` checkpoint path was fixed in 0.9.4 by loading with `weights_only=True`, and the vendor's advisory list also carries an SSRF guard-bypass issue (CVE-2026-85673).
 
-### TRL, called directly
+Operational rule: **CLI only, bound to localhost, never exposed to a network.** If you need a GUI, put it behind an authenticating proxy on a private interface — or pick another framework.
+
+### **TRL, called directly**
 ```python
 from trl import SFTTrainer, SFTConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -609,7 +608,7 @@ trainer = SFTTrainer(
 trainer.train()
 ```
 
-### PEFT adapter format
+### **PEFT adapter format**
 ```
 adapter_config.json        # r, alpha, target_modules, base_model_name
 adapter_model.safetensors  # the A and B matrices
@@ -617,7 +616,7 @@ adapter_model.safetensors  # the A and B matrices
 
 This is what makes multi-LoRA serving work: the adapter stays separate, portable across every serving engine, and swappable at request time.
 
-### Accelerate, DeepSpeed, FSDP2
+### **Accelerate, DeepSpeed, FSDP2**
 ```bash
 accelerate config
 accelerate test
@@ -632,37 +631,37 @@ model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
 
 ---
 
-### Lab 5-1 — Three frameworks, one model (1–2 days)
+### **Lab 5-1 — Three frameworks, one model**
 - Train `Qwen/Qwen3-4B-Instruct-2507` with Unsloth, TRL, and Axolotl on identical data and matched hyperparameters.
 - Record training time, peak memory, final loss, and the domain eval score for each.
 - Explain the differences: kernels, data collation, loss masking, LR schedule.
 
-### Lab 5-2 — DPO through the wrappers (1 day)
+### **Lab 5-2 — DPO through the wrappers**
 - Take the Lab 5-1 SFT checkpoint and run DPO with `DPOTrainer`.
 - Repeat the same DPO run through Axolotl's `rl: dpo` config.
 - Confirm the two produce comparable win rates on the same eval.
 
-### Lab 5-3 — GRPO on GSM8K (1–2 days)
+### **Lab 5-3 — GRPO on GSM8K**
 - Set up GRPO on GSM8K with a verifiable `\boxed{}` reward.
 - Train, evaluate on the held-out split.
 - Record GPU-hours: G=8 rollouts × 1000 steps = 8,000 generations.
 
-### Lab 5-4 — Multi-LoRA serving (1 day)
+### **Lab 5-4 — Multi-LoRA serving**
 - Train three LoRA adapters on different tasks.
 - Serve with vLLM `--enable-lora`.
 - Hot-swap between adapters per request; measure latency, throughput, and memory.
 
-### Lab 5-5 — Full pipeline (1–2 days)
+### **Lab 5-5 — Full pipeline**
 - LoRA → merge → quantize → vLLM.
 - Benchmark TTFT, TPOT, and throughput at batch 1, 8, 32 against the FP16 base.
 
-### Lab 5-6 — Edge deployment (1 day)
+### **Lab 5-6 — Edge deployment**
 - Merge, convert to GGUF Q4_K_M, serve with llama.cpp or Ollama.
 - Deploy on a laptop or phone and measure tokens/sec.
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **Axolotl's version line is lower than the source notes claim.** 0.29.0 does not exist; 0.21.1 is current.
 - **LlamaFactory's WebUI is exploitable.** CVE-2026-58116 has no patched release. Never bind it publicly.
 - **TorchTune is abandoned.** A tutorial that reaches for it is teaching a dead path.
@@ -673,7 +672,7 @@ model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] One model trained with three frameworks on identical data, with a comparison table.
 - [ ] The LlamaFactory CVE and the operational rule that follows from it written down.
 - [ ] A framework decision rule stated in one sentence, with the hardware it assumes.
@@ -682,7 +681,7 @@ model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
 
 ---
 
-## Resources
+## **Resources**
 - Axolotl v0.21.1 — https://github.com/axolotl-ai-cloud/axolotl/releases/tag/v0.21.1
 - Unsloth v0.1.913-beta — https://github.com/unslothai/unsloth/releases/tag/v0.1.913-beta
 - LlamaFactory v0.9.5 — https://github.com/hiyouga/LlamaFactory/releases/tag/v0.9.5

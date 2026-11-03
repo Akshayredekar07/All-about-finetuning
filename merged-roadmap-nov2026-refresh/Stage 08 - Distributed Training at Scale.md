@@ -1,11 +1,11 @@
-# Stage 8 — Distributed Training at Scale
+# **Stage 8 — Distributed Training at Scale**
 
 **Outcome:** you can take a model that does not fit on one GPU and put it on a node or a rack — choosing between FSDP/ZeRO-3, tensor parallelism, pipeline parallelism and expert parallelism on evidence rather than habit, and you can read a training log well enough to tell whether the bottleneck is compute, communication or data.
 
-> [!warning] This is a depth track, not a gate
-> Stages 0–7 and 9–11 are all reachable on a single 24 GB card. Stage 8 matters when the base model is bigger than your GPU, when you are training an MoE, or when you are running RL rollouts that need throughput. If your base fits in 24 GB and your dataset is under 100K samples, do Stage 8 last and do it deliberately.
+This is a depth track, not a gate
+Stages 0–7 and 9–11 are all reachable on a single 24 GB card. Stage 8 matters when the base model is bigger than your GPU, when you are training an MoE, or when you are running RL rollouts that need throughput. If your base fits in 24 GB and your dataset is under 100K samples, do Stage 8 last and do it deliberately.
 
-## The parallelism taxonomy
+## **The parallelism taxonomy**
 
 Five axes, each solving a different problem. Choosing well is mostly about knowing which resource is actually scarce.
 
@@ -19,7 +19,7 @@ Five axes, each solving a different problem. Choosing well is mostly about knowi
 
 Context parallelism, sequence parallelism and disaggregated prefill extend the same idea across sequence dimensions; they appear in Stage 10 on the serving side.
 
-## Sharded data parallelism in practice
+## **Sharded data parallelism in practice**
 
 FSDP is the modern default, and ZeRO-3 is the same idea with a different vocabulary. The equivalences are worth stating because they come up in every interview:
 
@@ -46,7 +46,7 @@ model = FSDP(
 )
 ```
 
-### DeepSpeed ZeRO-3 with offload, as an Axolotl config
+### **DeepSpeed ZeRO-3 with offload, as an Axolotl config**
 
 ```yaml
 deepspeed:
@@ -65,7 +65,7 @@ deepspeed:
 
 Offload trades PCIe bandwidth for HBM capacity. It is a last resort for a 7B–13B model on a consumer node, and roughly mandatory once the optimizer states no longer fit in aggregate GPU memory.
 
-### Production multi-GPU config (Llama 4 Scout shape)
+### **Production multi-GPU config (Llama 4 Scout shape)**
 
 ```yaml
 base_model: meta-llama/Llama-4-Scout-17B-16E-Instruct
@@ -114,7 +114,7 @@ output_dir: ./outputs/llama4-scout-run-001
 
 Two details in that config are load-bearing. `sequence_len: 8192` is a training choice, not a model limit — training at the model's advertised maximum context is a way to spend a GPU-month discovering OOM. And `fsdp_config.fsdp_transformer_layer_cls_to_wrap` must name the actual decoder class of the model you loaded, or FSDP will shard at the wrong granularity and lose most of its benefit.
 
-## Expert parallelism and the MoE training problem
+## **Expert parallelism and the MoE training problem**
 
 Expert parallelism is the hardest communication pattern in modern training: every token has to be dispatched to the GPUs holding its chosen experts, and then gathered back. DeepEP and Hybrid-EP are the two current implementations.
 
@@ -122,7 +122,7 @@ Expert parallelism is the hardest communication pattern in modern training: ever
 
 **Hybrid-EP** is NVIDIA's variant of the same idea, built on TMA instructions for minimal SM usage and a larger NVLink domain, with fine-grained communication–computation overlap for single-batch scenarios and PCIe fallback for non-NVLink environments [117].
 
-### What Hybrid-EP is actually worth
+### **What Hybrid-EP is actually worth**
 
 The source document claimed "514% throughput improvement over baseline EP". NVIDIA's own technical blog from 2 February 2026 reports something much more modest and much more useful:
 
@@ -147,13 +147,13 @@ In Megatron Core, both backends are selected the same way:
 
 The operational rule that follows from the topology: keep expert-parallel and tensor-parallel traffic inside the NVLink domain whenever possible, because EP×TP all-to-all is the most expensive collective in the stack [118].
 
-### Megatron-Core path, for scale
+### **Megatron-Core path, for scale**
 
 Megatron-LM's October 2026 state includes MFSDP v2, MoE execution paths (DeepEP V2, MoonEP, Mixture-of-Kittens), dynamic context parallelism, hybrid attention, disaggregated inference, and a fix for HybridEP NCCL routing-map all-gather. Megatron Core 0.19 (August 2026) adds `HybridModel` with router balancing, packed-sequence dispatch and CUDA-graph-compatible activation offloading. NeMo Megatron Bridge 0.6.0 (19 August 2026) adds GLM-5.2 with fused cuDNN dynamic-sparse attention and 128K THD-packed context parallelism; Bridge 0.5.0 (22 June 2026) added Qwen3.5, DeepSeek V4, GLM-5, Gemma 4 and Falcon H1 support.
 
 Published Megatron throughput numbers, for calibration: DeepSeek-V3 671B on 256 GB300 at 1,648 TFLOPs/s per GPU (6,338 tokens/s per GPU); Qwen3-235B-A22B at 8,832 tokens/s per GPU; Nemotron 3 Ultra in NVFP4 at 3,744 tokens/s per GPU. Treat them as an upper bound for a heavily optimised configuration, not as a promise for your cluster.
 
-## Diagnosing a slow distributed run
+## **Diagnosing a slow distributed run**
 
 The three bottlenecks produce three different log signatures, and they are worth memorising because the first instinct is almost always wrong.
 
@@ -173,7 +173,7 @@ python -c "import torch; print(torch.cuda.get_device_capability())"
 df -h /dev/shm                 # too-small shm breaks NCCL and dataloader workers
 ```
 
-## Multi-node launch
+## **Multi-node launch**
 
 ```bash
 # Single node
@@ -193,7 +193,7 @@ accelerate launch --num_processes 8 --num_machines 2 --machine_rank 1 \
 
 The rendezvous endpoint must be reachable from every node on the same port, and the shared filesystem must be mounted identically on all nodes if the run writes checkpoints. Both failures present as a hang with no error message, which is why they belong in a pre-flight checklist rather than in a debugging session.
 
-## Distributed training pre-flight checklist
+## **Distributed training pre-flight checklist**
 
 - [ ] The model actually does not fit on one GPU — the reason for going distributed is written down.
 - [ ] The interconnect topology is known: which pairs have NVLink or PCIe P2P, and which cross nodes only over RDMA.

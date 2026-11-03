@@ -1,10 +1,9 @@
-# Stage 07 — Specialization and Low-Level
+# **Stage 07 — Specialization and Low-Level**
 
-**Weeks:** 24
 **Libraries:** `sentence-transformers` 6.2.0 · `diffusers` 0.42.1 · `timm` 1.0.30 · `bitsandbytes` 0.50.2 · `kernels` 0.18.1 · `triton` 3.9.0 · torch 2.15.0
 **Outcome:** one specialization that matches the target role, plus the performance layer for when you hit a memory or speed wall.
 
-## Sentence Transformers 6.2.0
+## **Sentence Transformers 6.2.0**
 
 For RAG, semantic search, embeddings, similarity, clustering, reranking. Sentence-BERT and its variants live here, along with cross-encoders and, since v5, sparse encoders [40].
 
@@ -40,10 +39,10 @@ hits = util.semantic_search(query, embeddings, top_k=2)
 - `intfloat/e5` series — strong retrieval models
 - MTEB leaderboard — check it for the current best model for your task
 
-> [!tip] Leaderboard reading, November 2026
-> MTEB v2 boards score 41 (English) and 131 (multilingual) tasks and rank by Borda count, so row order is not mean-score order. The leading open-weight general embedders are QZhou-Embedding (75.97) and Qwen3-Embedding-8B (75.23, Apache 2.0, 32K context); the multilingual v2 leader is Microsoft's `harrier-oss-v1-27b` (MIT, 74.27, 5,376 dims — expensive to store). Prefer **RTEB** (held-out sets the maintainers evaluate) over MTEB-only claims, and check the live board before committing [41].
->
-> For reranking, the open-weight leaders include Qwen3-Reranker-4B (0.6367 retrieval average) and `bge-reranker-v2-m3`; NVIDIA's Nemotron-3.5-Rerank-8B landed 20 Oct 2026. Reranking top-100 lifted Recall@5 from 0.695 to 0.816 in one independent study — and made top-20 worse, so measure on your own queries.
+Leaderboard reading, November 2026
+MTEB v2 boards score 41 (English) and 131 (multilingual) tasks and rank by Borda count, so row order is not mean-score order. The leading open-weight general embedders are QZhou-Embedding (75.97) and Qwen3-Embedding-8B (75.23, Apache 2.0, 32K context); the multilingual v2 leader is Microsoft's `harrier-oss-v1-27b` (MIT, 74.27, 5,376 dims — expensive to store). Prefer **RTEB** (held-out sets the maintainers evaluate) over MTEB-only claims, and check the live board before committing [41].
+
+For reranking, the open-weight leaders include Qwen3-Reranker-4B (0.6367 retrieval average) and `bge-reranker-v2-m3`; NVIDIA's Nemotron-3.5-Rerank-8B landed 20 Oct 2026. Reranking top-100 lifted Recall@5 from 0.695 to 0.816 in one independent study — and made top-20 worse, so measure on your own queries.
 
 **Operations**
 - `encode()` with `normalize_embeddings`
@@ -102,7 +101,7 @@ pip install -U sentence-transformers
 pip install -U "sentence-transformers[train]"
 ```
 
-## Diffusers 0.42.1
+## **Diffusers 0.42.1**
 
 The Transformers equivalent for diffusion models. Stable Diffusion, SDXL, FLUX, and ControlNet live here [42].
 
@@ -149,7 +148,7 @@ pip install -U diffusers
 pip install -U "diffusers[torch]"
 ```
 
-## timm 1.0.30
+## **timm 1.0.30**
 
 1000+ pretrained vision models: ResNet, ViT, EfficientNet, Swin Transformer, ConvNeXt, and more [43].
 
@@ -185,7 +184,7 @@ transforms  = timm.data.create_transform(**data_config, is_training=False)
 pip install -U timm
 ```
 
-## Bitsandbytes 0.50.2, kernels 0.18.1, Triton 3.9.0, CUDA
+## **Bitsandbytes 0.50.2, kernels 0.18.1, Triton 3.9.0, CUDA**
 
 Learn this when you hit GPU memory or speed limitations.
 
@@ -266,7 +265,7 @@ pip install -U bitsandbytes
 
 ---
 
-## Quantization theory
+## **Quantization theory**
 
 Weight formats, and what each one costs an 8B model:
 
@@ -281,10 +280,10 @@ Weight formats, and what each one costs an 8B model:
 | GGUF Q4_K_M | ~4.5 | ~4.5 GB | llama.cpp / Ollama format |
 | FP4 NVFP4 | 4 | 4 GB | Blackwell (B100/B200); 2× FP8 speed |
 
-> [!important] Two orthogonal axes
-> **Weight quantization and KV cache quantization are independent.** FP8 weights with a 4-bit KV cache is a valid and common 2026 production configuration, and choosing one does not commit you to the other. The failure mode to avoid is picking a KV format because the weight format "felt compressed".
+Two orthogonal axes
+**Weight quantization and KV cache quantization are independent.** FP8 weights with a 4-bit KV cache is a valid and common 2026 production configuration, and choosing one does not commit you to the other. The failure mode to avoid is picking a KV format because the weight format "felt compressed".
 
-## Retrieval stack: encoder, reranker, and what to actually fine-tune
+## **Retrieval stack: encoder, reranker, and what to actually fine-tune**
 
 The November 2026 retrieval landscape, and the practical split between the two model families.
 
@@ -315,7 +314,7 @@ The two mistakes that ruin embedding fine-tuning are: training with random negat
 
 Reranker training is a different shape. The training signal is a relevance judgement, not a contrastive pair, so the dataset is (query, positive document, judged-negative document) with graded labels, and the evaluation is nDCG@10 on a query set you did not train on.
 
-## Audio and vision specialisation
+## **Audio and vision specialisation**
 
 **ASR LoRA** is the most reliable of the specialisations because the metric is unambiguous:
 
@@ -363,7 +362,7 @@ lora_config = LoraConfig(
 
 **Vision-language** LoRA freezes the vision encoder by default and trains the LLM side; enabling the projector is the middle option and full unfreezing is the expensive one. Unsloth's `FastVisionModel` path with `finetune_vision_layers=False` is the lowest-risk starting point, and `UnslothVisionDataCollator` is required for conversational vision datasets.
 
-## Specialisation selection
+## **Specialisation selection**
 
 | If your work is… | Learn | Skip |
 |---|---|---|
@@ -376,14 +375,14 @@ lora_config = LoraConfig(
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 6 has two halves that are usually confused. The **specializations** (embeddings, generative vision, classification vision) are career choices — pick the one your target role needs. The **low-level layer** (quantization, kernels, Triton, CUDA) is a tool you reach for when a wall appears, not a curriculum to complete on its own.
 
 **Exit criterion:** one specialization shipped end to end, and one kernel written and benchmarked against the library implementation it replaces.
 
-## Environment
+## **Environment**
 ```bash
 pip install -U sentence-transformers "sentence-transformers[train]"
 pip install -U diffusers "diffusers[torch]"
@@ -393,10 +392,10 @@ pip install -U bitsandbytes kernels triton
 
 ---
 
-## Specialization A — Embeddings, search and reranking
+## **Specialization A — Embeddings, search and reranking**
 **For:** RAG, semantic search, similarity, clustering, reranking.
 
-### Topic checklist
+### **Topic checklist**
 - [ ] Sentence embeddings versus token embeddings
 - [ ] Cosine similarity and dot score
 - [ ] Bi-encoder versus cross-encoder
@@ -414,7 +413,7 @@ pip install -U bitsandbytes kernels triton
 - [ ] Hard negative mining
 - [ ] `push_to_hub()` and the `train-sentence-transformers` Hub skill
 
-### Model selection, November 2026
+### **Model selection, November 2026**
 | Use case | Pick |
 |---|---|
 | Fast general purpose | `all-MiniLM-L6-v2` |
@@ -428,7 +427,7 @@ MTEB v2 scores 41 (English) and 131 (multilingual) tasks and ranks by **Borda co
 
 Reranking is the cheapest quality win in retrieval: top-100 reranking lifted Recall@5 from 0.695 to 0.816 in one independent study, while reranking only the top 20 made it worse. Measure on your own queries.
 
-### Code
+### **Code**
 ```python
 from sentence_transformers import SentenceTransformer, util
 
@@ -473,10 +472,10 @@ model.push_to_hub("username/my-embedding-model")
 
 ---
 
-## Specialization B — Generative vision and audio
+## **Specialization B — Generative vision and audio**
 **For:** image generation, video generation, audio synthesis.
 
-### Topic checklist
+### **Topic checklist**
 - [ ] Pipeline types: text-to-image, image-to-image, inpainting, outpainting, text-to-video, image-to-video, text-to-audio, unconditional
 - [ ] Auto pipelines: `AutoPipelineForText2Image`, `AutoPipelineForImage2Image`, `AutoPipelineForInpainting`
 - [ ] Core concepts: forward noising, reverse denoising, denoising steps, guidance scale, negative prompts, seeds, latent diffusion
@@ -487,7 +486,7 @@ model.push_to_hub("username/my-embedding-model")
 - [ ] LoRA for diffusion models; Textual Inversion
 - [ ] Memory and speed: `enable_attention_slicing()`, VAE slicing and tiling, `enable_model_cpu_offload()`, xformers, `torch.compile()`, fp16 versus bf16
 
-### Code
+### **Code**
 ```python
 import torch
 from diffusers import DiffusionPipeline
@@ -514,10 +513,10 @@ Diffusers 0.42.1 (27 October 2026) carries a security patch — a reason to be o
 
 ---
 
-## Specialization C — Vision classification and features
+## **Specialization C — Vision classification and features**
 **For:** image classification, detection backbones, feature extraction, transfer learning.
 
-### Topic checklist
+### **Topic checklist**
 - [ ] `timm.list_models()` and filtering by architecture pattern and `pretrained=True`
 - [ ] `timm.model_info()`
 - [ ] Architecture families: ResNet, EfficientNet, ViT, Swin, ConvNeXt, DenseNet, MobileNet, RegNet, MaxViT, DINOv2-based models, EfficientViT
@@ -527,7 +526,7 @@ Diffusers 0.42.1 (27 October 2026) carries a security patch — a reason to be o
 - [ ] `resolve_model_data_config()` and `create_transform()` for correct normalization and input size
 - [ ] `features_only=True` with `out_indices` for detection and segmentation backbones
 
-### Code
+### **Code**
 ```python
 import timm
 
@@ -548,7 +547,7 @@ transforms  = timm.data.create_transform(**data_config, is_training=False)
 
 ---
 
-### Bitsandbytes 0.50.2
+### **Bitsandbytes 0.50.2**
 - [ ] 8-bit quantization — `BitsAndBytesConfig(load_in_8bit=True)`
 - [ ] 4-bit quantization — `BitsAndBytesConfig(load_in_4bit=True)`
 - [ ] NF4 versus FP4, and when each wins
@@ -565,7 +564,7 @@ import bitsandbytes as bnb
 optimizer = bnb.optim.AdamW8bit(model.parameters(), lr=2e-4)
 ```
 
-### HuggingFace `kernels` 0.18.1
+### **HuggingFace `kernels` 0.18.1**
 - [ ] What a Hub-hosted kernel is, and why version compatibility matters
 - [ ] `get_kernel()` — for example `kernels-community/flash-attn2`
 - [ ] Reading each kernel repo's model card for its available functions
@@ -580,7 +579,7 @@ kernel = get_kernel("kernels-community/flash-attn2")
 # out = kernel.flash_attn_func(q, k, v, causal=True)
 ```
 
-### Triton 3.9.0
+### **Triton 3.9.0**
 - [ ] Why Triton: write GPU kernels in Python instead of C++
 - [ ] `@triton.jit`, `tl.program_id()`, `tl.arange()`
 - [ ] `tl.load()` and `tl.store()` with masks
@@ -614,7 +613,7 @@ def add(x: torch.Tensor, y: torch.Tensor):
     return out
 ```
 
-### Raw CUDA
+### **Raw CUDA**
 - [ ] `__global__`, `__device__`, `__host__`
 - [ ] Launching kernels with grid and block dimensions
 - [ ] `cudaMalloc`, `cudaMemcpy`, `cudaFree`
@@ -639,10 +638,10 @@ __global__ void add_kernel(const float* a, const float* b, float* c, int n) {
 
 To make it callable from Python you also need a C++ wrapper that allocates the output tensor, computes the grid and block sizes, and launches the kernel, exposed with `load_inline(name=..., cpp_sources=..., cuda_sources=..., functions=[...])`.
 
-### Kernels worth knowing
+### **Kernels worth knowing**
 Flash Attention and Flash Attention 2; fused LayerNorm and RMSNorm; fused RoPE (Llama, Mistral, Qwen); Paged Attention (vLLM's serving innovation); fused cross-entropy (lower training memory); Triton matmul (can beat cuBLAS at specific shapes).
 
-### Study order
+### **Study order**
 ```
 1. CUDA by Example (book)
 2. Triton tutorials: https://triton-lang.org/main/getting-started/tutorials
@@ -654,28 +653,28 @@ Flash Attention and Flash Attention 2; fused LayerNorm and RMSNorm; fused RoPE (
 
 ---
 
-### Lab 6-1 — Embedding + reranking pipeline (2 days)
+### **Lab 6-1 — Embedding + reranking pipeline**
 - Encode 10K documents with `Qwen3-Embedding-4B` and build a FAISS index.
 - Rerank the top 100 with `Qwen3-Reranker-4B` and the top 20 with the same model.
 - Measure Recall@5 for: retrieval only, rerank-top-20, rerank-top-100.
 - Confirm the published finding on your own data — reranking too few candidates can hurt.
 
-### Lab 6-2 — Fine-tune an embedder (1–2 days)
+### **Lab 6-2 — Fine-tune an embedder**
 - Fine-tune with `MultipleNegativesRankingLoss` on your domain pairs.
 - Add hard negatives mined from the current model's top-k mistakes.
 - Evaluate with `InformationRetrievalEvaluator` before and after.
 
-### Lab 6-3 — Diffusion memory ladder (1 day)
+### **Lab 6-3 — Diffusion memory ladder**
 - Generate at batch 1 on a 16 GB card; record peak memory.
 - Apply `enable_attention_slicing()`, then VAE tiling, then `enable_model_cpu_offload()`.
 - Record the quality delta at each step and the throughput cost.
 
-### Lab 6-4 — timm transfer learning (1 day)
+### **Lab 6-4 — timm transfer learning**
 - Train a head on a small classification dataset with `timm`.
 - Compare `resolve_model_data_config()` against hardcoded ImageNet normalization — show the accuracy gap.
 - Extract intermediate features with `features_only=True` and `out_indices`.
 
-### Lab 6-5 — Write and benchmark a Triton kernel (2–3 days)
+### **Lab 6-5 — Write and benchmark a Triton kernel**
 - Write vector add, softmax, and a tiled matmul.
 - Benchmark each against the PyTorch equivalent with `triton.testing.do_bench()`.
 - Autotune the matmul and report where Triton beats cuBLAS.
@@ -683,7 +682,7 @@ Flash Attention and Flash Attention 2; fused LayerNorm and RMSNorm; fused RoPE (
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **MTEB row order is Borda count, not mean score.** Comparing the wrong column changes your conclusion.
 - **Embedding dimension drives storage cost.** A 5,376-dim model is a different order of magnitude in a vector database than a 1,024-dim one.
 - **Reranking a short candidate list can reduce accuracy.** Always measure.
@@ -695,7 +694,7 @@ Flash Attention and Flash Attention 2; fused LayerNorm and RMSNorm; fused RoPE (
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] One specialization shipped end to end with a public artifact.
 - [ ] For embeddings: a retrieval eval showing a measured gain from the fine-tune.
 - [ ] For diffusion: an image grid plus the memory/throughput ladder.
@@ -705,7 +704,7 @@ Flash Attention and Flash Attention 2; fused LayerNorm and RMSNorm; fused RoPE (
 
 ---
 
-## Resources
+## **Resources**
 - sentence-transformers v6.2.0 — https://github.com/huggingface/sentence-transformers/releases/tag/v6.2.0
 - MTEB leaderboard — https://leaderboard.mteb.org/models
 - Diffusers v0.42.1 — https://github.com/huggingface/diffusers/releases/tag/v0.42.1

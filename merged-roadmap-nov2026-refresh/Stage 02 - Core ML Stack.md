@@ -1,10 +1,9 @@
-# Stage 02 — Core ML Stack
+# **Stage 02 — Core ML Stack**
 
-**Weeks:** 6–11
 **Libraries:** `transformers` 5.22.1 · `tokenizers` 0.23.3 · `evaluate` 0.4.6 · `lighteval` 0.13.0 · `lm-evaluation-harness` 0.4.13
 **Outcome:** run any model, fine-tune it with the built-in trainer, and measure it with a metric that matches the task.
 
-## Transformers 5.22.1
+## **Transformers 5.22.1**
 
 The most important library in the ecosystem: 1M+ pretrained models for text, vision, audio, and multimodal tasks. Version 5 is PyTorch-only and requires **Python ≥3.11** and `huggingface_hub` in the 1.31–2.x range [1][2].
 
@@ -300,7 +299,7 @@ pip install -U transformers torch
 pip install -U "transformers[torch]"   # all torch deps
 ```
 
-## Tokenizers 0.23.3
+## **Tokenizers 0.23.3**
 
 The fast tokenization library (written in Rust) that powers all `AutoTokenizer` classes. It is how models actually read text [28].
 
@@ -391,7 +390,7 @@ fast.save_pretrained("./my-tokenizer")
 pip install -U tokenizers
 ```
 
-## Evaluation stack
+## **Evaluation stack**
 
 Three libraries with three different jobs. The source notes blurred them into "evaluate, and LightEval for LLMs". The accurate split matters because each one answers a different question [50][51][52].
 
@@ -458,7 +457,7 @@ pip install scikit-learn rouge_score sacrebleu
 
 ---
 
-## Attention architectures
+## **Attention architectures**
 
 The 2026 model landscape is mostly a story about attention. Every open frontier release changed how the KV cache is stored, and that change determines what the serving stack can do with long context.
 
@@ -486,7 +485,7 @@ Memory complexity is O(n²d) — quadratic in sequence length.
 
 The practical consequence for this roadmap: KV cache size is not a serving detail, it is an architectural property that sets your context ceiling before you write a single line of serving code. Stage 10 quantifies it.
 
-## Parallelism for training and inference
+## **Parallelism for training and inference**
 
 Data parallelism replicates the model and all-reduces gradients. FSDP shards parameters, gradients and optimizer states and is functionally equivalent to ZeRO-3. Tensor parallelism splits individual layers and needs NVLink. Pipeline parallelism splits layers across stages and pays a bubble of `(p-1)/m`. Expert parallelism splits MoE experts and pays an all-to-all.
 
@@ -494,14 +493,14 @@ The full taxonomy, the code, and the failure signatures are in Stage 8.
 
 ---
 
-## Worksheet additions
+## **Worksheet additions**
 
-## Scope
+## **Scope**
 Stage 1 is where the stack stops being a list of APIs and becomes a model. Three things have to work together: a tokenizer that decides what the model sees, a model class that decides what the model does, and an evaluation harness that decides whether any of it mattered.
 
 **Exit criterion:** fine-tune a pretrained model on a public dataset, push it to the Hub, and produce a metric you can defend in an interview.
 
-## Environment
+## **Environment**
 ```bash
 pip install -U transformers torch tokenizers
 pip install -U "transformers[torch]"
@@ -514,7 +513,7 @@ pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 
 ---
 
-### Pipeline API
+### **Pipeline API**
 - [ ] Text: `text-classification`, `token-classification`, `question-answering`, `table-question-answering`, `text-generation`, `fill-mask`, `zero-shot-classification`, `feature-extraction`
 - [ ] Vision: `image-classification`, `object-detection`, `image-segmentation`, `mask-generation`, `zero-shot-image-classification`, `zero-shot-object-detection`, `depth-estimation`, `image-to-image`, `image-feature-extraction`, `keypoint-matching`, `video-classification`
 - [ ] Audio: `automatic-speech-recognition`, `audio-classification`, `zero-shot-audio-classification`, `text-to-audio`, `text-to-speech`
@@ -523,7 +522,7 @@ pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 - [ ] Replacing the removed pipelines: `summarization`, `translation`, `text2text-generation`, `image-to-text`, `conversational`
 - [ ] Isolating an old tutorial in `pip install -U "transformers<5"`
 
-### AutoTokenizer
+### **AutoTokenizer**
 - [ ] `from_pretrained()` for any tokenizer
 - [ ] Encoding a single sentence, sentence pairs, and batches
 - [ ] Calling the tokenizer directly (`encode_plus()` is removed)
@@ -539,7 +538,7 @@ pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 - [ ] Adding new special tokens and resizing model embeddings
 - [ ] Fast (Rust) tokenizers as the default, with parallel tokenization
 
-### AutoModel classes
+### **AutoModel classes**
 - [ ] NLU: `AutoModelForSequenceClassification`, `AutoModelForMultipleChoice`, `AutoModelForTokenClassification`, `AutoModelForQuestionAnswering`
 - [ ] NLG: `AutoModelForCausalLM`, `AutoModelForMaskedLM`, `AutoModelForSeq2SeqLM`, `AutoModelForSpeechSeq2Seq`
 - [ ] Vision: `AutoModelForImageClassification`, `AutoModelForObjectDetection`, `AutoModelForSemanticSegmentation`, `AutoModelForInstanceSegmentation`, `AutoModelForDepthEstimation`, `AutoModelForImageToImage`
@@ -547,7 +546,7 @@ pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 - [ ] Audio: `AutoModelForAudioClassification`, `AutoModelForCTC`
 - [ ] Base and utility: `AutoModel`, `AutoConfig`, `AutoImageProcessor`, `AutoFeatureExtractor`, `AutoProcessor`
 
-### Trainer
+### **Trainer**
 - [ ] `TrainingArguments` — all training hyperparameters
 - [ ] `Trainer` — the standard supervised loop
 - [ ] `processing_class` (replaces the old `tokenizer` argument)
@@ -557,7 +556,7 @@ pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 - [ ] Mixed precision: `bf16=True` on newer GPUs, `fp16=True` on older
 - [ ] Collators: `DataCollatorWithPadding`, `DataCollatorForSeq2Seq`, `DataCollatorForLanguageModeling`, `DataCollatorForTokenClassification`
 
-### Configuration, generation, architectures
+### **Configuration, generation, architectures**
 - [ ] `AutoConfig` and `from_pretrained()` with `device_map="auto"` and `dtype="auto"`
 - [ ] `save_pretrained()`, `push_to_hub()`, model cards
 - [ ] Loading community kernels through `attn_implementation`
@@ -573,7 +572,7 @@ pip list | grep -i -E "transformers|tokenizers|evaluate|lighteval|lm-eval"
 
 ---
 
-### Pipeline, and what to do when the task is gone
+### **Pipeline, and what to do when the task is gone**
 ```python
 from transformers import pipeline
 from transformers.pipelines import get_supported_tasks
@@ -601,7 +600,7 @@ ids = model.generate(**tok("summarize: " + text, return_tensors="pt", truncation
 print(tok.decode(ids[0], skip_special_tokens=True))
 ```
 
-### Trainer with a custom metric
+### **Trainer with a custom metric**
 ```python
 import numpy as np
 import evaluate
@@ -649,7 +648,7 @@ trainer.save_model("./my-model")
 trainer.push_to_hub("username/my-model")
 ```
 
-### Generation controls
+### **Generation controls**
 ```python
 from transformers import GenerationConfig, TextStreamer
 
@@ -664,7 +663,7 @@ model.generate(**inputs, generation_config=cfg)
 model.generate(**inputs, max_new_tokens=100, streamer=TextStreamer(tokenizer))
 ```
 
-### Tokenizer deep dive
+### **Tokenizer deep dive**
 ```python
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
@@ -684,7 +683,7 @@ fast = PreTrainedTokenizerFast(tokenizer_object=tok, unk_token="[UNK]", pad_toke
 fast.save_pretrained("./my-tokenizer")
 ```
 
-### Evaluation, three ways
+### **Evaluation, three ways**
 ```python
 import evaluate
 
@@ -706,7 +705,7 @@ lm-eval ls tasks
 # see https://github.com/huggingface/lighteval for the current task and backend names
 ```
 
-### Decontamination, the way the harness actually implements it
+### **Decontamination, the way the harness actually implements it**
 ```bash
 # 1. Generate n-gram files + info.json for your training set
 python scripts/pile_ngram_generation/build_ngrams.py --train-data ./train.jsonl \
@@ -721,36 +720,36 @@ The harness marks contaminated documents and reports a second metric with a `dec
 
 ---
 
-### Lab 1-1 — Pipeline inventory (0.5 day)
+### **Lab 1-1 — Pipeline inventory**
 - Print `get_supported_tasks()` and diff it against the checklist above.
 - Run one pipeline per modality (text, vision, audio, multimodal).
 - Replace a removed pipeline two ways: chat model and seq2seq `generate()`.
 
-### Lab 1-2 — Trainer fine-tune on IMDB (1–2 days)
+### **Lab 1-2 — Trainer fine-tune on IMDB**
 - Fine-tune DistilBERT for sentiment with `Trainer`.
 - Record loss curve, eval accuracy, training wall time, peak memory.
 - Push the model and the tokenizer to the Hub with a model card.
 - Re-load it in a fresh process with `pipeline("sentiment-analysis", model=...)`.
 
-### Lab 1-3 — Tokenizer forensics (1 day)
+### **Lab 1-3 — Tokenizer forensics**
 - Tokenize a multilingual sample; explain each subword split.
 - Map tokens back to characters with `offset_mapping` and `word_ids()`.
 - Build a NER alignment by hand for three sentences.
 - Train a 30k-vocab BPE tokenizer and wrap it with `PreTrainedTokenizerFast`.
 
-### Lab 1-4 — Generation sweep (1 day)
+### **Lab 1-4 — Generation sweep**
 - Compare greedy, beam, temperature, top-k, top-p on the same prompt.
 - Measure tokens/sec and output length.
 - Stream with `TextStreamer` and with `TextIteratorStreamer`.
 
-### Lab 1-5 — Three eval harnesses on one model (1 day)
+### **Lab 1-5 — Three eval harnesses on one model**
 - Score the same checkpoint with `evaluate`, `lm-eval`, and `lighteval`.
 - Record which tasks each harness supports and what the output format is.
 - Run a decontamination pass and report how many eval documents were flagged.
 
 ---
 
-## Pitfalls
+## **Pitfalls**
 - **`torch_dtype` → `dtype`.** The old argument name warns or errors in v5.
 - **`Trainer(tokenizer=...)` → `processing_class=...`.** Passing the old argument raises a deprecation error.
 - **`encode_plus()` is gone.** Call the tokenizer directly.
@@ -762,7 +761,7 @@ The harness marks contaminated documents and reports a second metric with a `dec
 
 ---
 
-## Acceptance gate
+## **Acceptance gate**
 - [ ] Every task class in the pipeline inventory has been run at least once.
 - [ ] A `Trainer` fine-tune completed and was pushed to the Hub with a card.
 - [ ] The pushed model reloads in a fresh process and produces the same output as the local copy.
@@ -772,7 +771,7 @@ The harness marks contaminated documents and reports a second metric with a `dec
 
 ---
 
-## Resources
+## **Resources**
 - Transformers v5.22.1 release — https://github.com/huggingface/transformers/releases/tag/v5.22.1
 - transformers on PyPI — https://pypi.org/project/transformers/
 - tokenizers on PyPI — https://pypi.org/project/tokenizers/
