@@ -1,0 +1,12 @@
+# train environment: TRL, PEFT, Unsloth
+# Install: uv pip install -r envs/train.txt
+huggingface_hub
+datasets
+transformers
+accelerate
+evaluate
+peft
+trl
+safetensors
+tokenizers
+bitsandbytes

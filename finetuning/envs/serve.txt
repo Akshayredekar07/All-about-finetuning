@@ -1,0 +1,5 @@
+# serve environment: vLLM, SGLang
+# Never serve from the train environment. The engine caps the transformers range.
+# Install: uv pip install -r envs/serve.txt
+vllm
+sglang
