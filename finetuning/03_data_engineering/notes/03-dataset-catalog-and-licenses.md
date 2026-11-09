@@ -285,6 +285,14 @@ usable share = kept rows / all rows
 
 ### 7.9 Comparison and assumptions
 
+```mermaid
+flowchart TD
+    Q{"Will the model be shipped?"} -->|"yes"| S{"Every source has a stated permissive license?"}
+    Q -->|"no, research only"| R["Unknown and NC rows are allowed, record the limit"]
+    S -->|"yes"| C["Use the set, record provenance"]
+    S -->|"no"| F["Drop or clarify the unknown and NC subsets first"]
+```
+
 | choice | strength | assumption that can fail |
 |---|---|---|
 | use a clean small set (Dolly, UltraFeedback) | easy to defend | it is big enough for your task |
