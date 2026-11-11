@@ -1,4 +1,4 @@
-# **Stage 03 Data Engineering: Index**
+# **Stage 03 Data Engineering**
 
 **Outcome of the stage.** A dataset you can defend: sourced, licensed, deduplicated, decontaminated, format-checked, versioned and documented. **Exit criterion.** A public dataset on the Hub with a data card, a license table, a decontamination report, and a held-out split that no training run ever touched.
 
@@ -25,8 +25,8 @@ This file is the map for the stage. It lists the notes in reading order, where e
 | 01 | [01-why-data-and-data-shapes.md](01-why-data-and-data-shapes.md) | why data is first, trainer shapes, row share versus token share | done |
 | 02 | [02-formats-and-chat-templates.md](02-formats-and-chat-templates.md) | storage formats, chat templates, loss masks | done |
 | 03 | [03-dataset-catalog-and-licenses.md](03-dataset-catalog-and-licenses.md) | where data comes from, what you may use, license audit | done |
-| 04 | 04-quality-and-deduplication.md | exact and near-duplicate removal, MinHash | next |
-| 05 | 05-decontamination.md | removing evaluation leaks | planned |
+| 04 | [04-quality-and-deduplication.md](04-quality-and-deduplication.md) | exact, near and semantic duplicates, MinHash, LSH, reading rows | done |
+| 05 | 05-decontamination.md | removing evaluation leaks | next |
 | 06 | 06-synthetic-data.md | rubric generation, model collapse | planned |
 | 07 | 07-pii-and-eu-ai-act.md | scrubbing, provenance, documentation | planned |
 | 08 | 08-domain-dataset-and-splits.md | build, split, version | planned |
@@ -132,8 +132,12 @@ Under template A, r1 has 12 tokens and 3 trained tokens. Under template B it has
 | $d$, $\Delta$, $q$, $W$ | default system tokens, template length gap, share rendered with B, padding waste | note 02 |
 | $g$, $n_g$, $\rho_g$, $u$ | license group, rows in the group, its row share, usable share after the license gate | note 03 |
 | $L_{\text{cut}}$, $\bar T$, $E$, $D$, $R$ | cut length, mean row length, epochs, total tokens, tokens per second | note 03 |
+| $S_i$, $J$, $J_{\min}$, $\hat J$ | piece set of row $i$, Jaccard similarity, duplicate threshold, MinHash estimate | note 04 |
+| $\kappa$, $n_{\text{band}}$, $n_{\text{row}}$, $P_{\text{cand}}$ | hash functions, LSH bands, rows per band, candidate probability | note 04 |
+| $w_{\text{sig}}$, $M_{\text{sig}}$, $d$, $w_{\text{sim}}$, $B_{\text{blk}}$ | signature entry bytes, signature memory, embedding size, similarity value bytes, block rows | note 04 |
+| $\lambda$, $n_{\text{read}}$ | defect rate, rows read by hand | note 04 |
 
-**Reading tips.** The letter $t$ always means a token position. Shares use Greek letters ($\rho$ rows, $\sigma$ tokens) so they never clash with $t$ or $T$. The letter $c$ means a constant overhead in note 02, while $c_k$ means a row count in note 01. The letter $q$ is the mixing share so it never clashes with $\pi_\theta$. The letter $g$ is a license group and nothing else. The planned symbols $\beta$ and $\eta$ are not used in this stage.
+**Reading tips.** The letter $t$ always means a token position. Shares use Greek letters ($\rho$ rows, $\sigma$ tokens) so they never clash with $t$ or $T$. The letter $c$ means a constant overhead in note 02, while $c_k$ means a row count in note 01. The letter $q$ is the mixing share so it never clashes with $\pi_\theta$. The letter $g$ is a license group and nothing else. The letter $\kappa$ is the number of hash functions, so it never clashes with $k$ from note 02. The planned symbols $\beta$ and $\eta$ are not used in this stage.
 
 ---
 
@@ -255,6 +259,9 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 | 03 | The Tulu 3 card omits a 50,000 row subset (OpenMath 2 GSM8K) and gives no license for FLAN v2, so 14.9 percent of rows have no stated license. |
 | 03 | xLAM 60k is CC BY 4.0 and gated, not CC BY-NC 4.0. |
 | 03 | Argilla DPO mix 7k has 7,500 rows, not about 50K. UltraChat 200k has 515,311 rows over four splits, and the Tulu 3 8B preference mixture has 272,898 rows. |
+| 04 | The source's dedup code strips whitespace only, special-cases row 0, depends on row order and uses single words, and its 0.8 threshold with 128 permutations means 9 bands of 13 rows, which catches about 40 percent of pairs at exactly 0.8. |
+| 04 | datasketch 2.0.0 changed the default permutation scheme to 32 bits, so saved indexes must be rebuilt. |
+| 04 | Reading 100 rows only bounds a defect rate near 3 percent, so the source's "bad in 100 means bad in 1M" holds only for common defects. |
 
 **Not checked in note 03.** ToolBench, ToolACE, AIME, ARC-AGI, the multimodal sets, Wikipedia, Common Crawl and The Stack licenses.
 

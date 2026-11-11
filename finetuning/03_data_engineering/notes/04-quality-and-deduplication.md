@@ -238,6 +238,16 @@ for each row:
 check candidates, link duplicate pairs, keep one row per group
 ```
 
+```mermaid
+flowchart LR
+    S["Signature of 128 entries"] --> B1["Band 1: 13 entries"]
+    S --> B2["Band 2: 13 entries"]
+    S --> B3["Bands 3 to 9"]
+    B1 --> H["Equal band in two rows: candidate pair"]
+    B2 --> H
+    B3 --> H
+```
+
 **Worked example.** `datasketch` picks the banding itself for a threshold and a signature length. For threshold 0.8 and 128 permutations it chose 9 bands of 13 rows (measured, and my own copy of its search gave the same). FineWeb uses 14 bands of 8 rows on 112 hashes (from the FineWeb paper).
 
 **Beginner trap.** Expecting every pair above the threshold to be found. At 9 by 13 a pair with $J = 0.857$ is a candidate with probability 0.7283, so about 27 percent are missed. On 200 random seeds the toy pair r1 and r2 was found 153 times, which is 0.765, close to the prediction (measured, CPU).
@@ -256,6 +266,14 @@ check candidates, link duplicate pairs, keep one row per group
 embed every row with a small encoder, normalize to length 1
 cosine(a, b) = a dot b
 duplicates = pairs with cosine above the cut, inside each cluster
+```
+
+```mermaid
+flowchart LR
+    E["Embed rows on the GPU"] --> C["Cluster with k-means"]
+    C --> P["Cosine inside each cluster"]
+    P --> T["Pairs above the cut are duplicates"]
+    T --> K["Keep one row per group"]
 ```
 
 **Worked example.** Two unit vectors at an angle of 0.2 radians have cosine $\cos 0.2 = 0.980$, which passes a 0.9 cut. This is where the GPU enters, covered in section 9.6.
@@ -335,18 +353,18 @@ $$J(A, B) = \frac{|A \cap B|}{|A \cup B|} = \frac{|A \cap B|}{|A| + |B| - |A \ca
 **Worked example: r1 and r2 as word sets.**
 
 $$\begin{aligned}
-|A| &= 6 \\[6pt]
-|B| &= 7 \\[6pt]
-|A \cap B| &= 6 \\[6pt]
-|A \cup B| &= 6 + 7 - 6 = 7 \\[8pt]
+\lvert A \rvert &= 6 \\[6pt]
+\lvert B \rvert &= 7 \\[6pt]
+\lvert A \cap B \rvert &= 6 \\[6pt]
+\lvert A \cup B \rvert &= 6 + 7 - 6 = 7 \\[8pt]
 J &= \frac{6}{7} = \boxed{0.8571}
 \end{aligned}$$
 
 **Worked example: the same rows as word pairs.**
 
 $$\begin{aligned}
-|A| &= 5 \qquad |B| = 7 \qquad |A \cap B| = 3 \\[6pt]
-|A \cup B| &= 5 + 7 - 3 = 9 \\[8pt]
+\lvert A \rvert &= 5 \qquad \lvert B \rvert = 7 \qquad \lvert A \cap B \rvert = 3 \\[6pt]
+\lvert A \cup B \rvert &= 5 + 7 - 3 = 9 \\[8pt]
 J &= \frac{3}{9} = \boxed{0.3333}
 \end{aligned}$$
 
@@ -611,7 +629,6 @@ distinct after lower and whitespace <a number at most the line above>
 ```python
 # ── Cell 3. Near-duplicates with MinHash and LSH ─────────────────
 #    Word sets versus 3-word shingles, threshold 0.8, 128 permutations
-#    Keep a row only when no earlier kept row matches
 # ─────────────────────────────────────────────────────────────────
 from datasketch import MinHash, MinHashLSH
 
@@ -631,16 +648,14 @@ def count_kept(piece_sets):
             kept += 1
     return kept
 
-tokens = [p.lower().split() for p in prompts]
-words = [set(t) for t in tokens]
-triples = [{" ".join(t[i:i + 3]) for i in range(max(len(t) - 2, 1))} for t in tokens]
-print("kept with word sets", count_kept(words), "of", len(prompts))
-print("kept with 3-word shingles", count_kept(triples), "of", len(prompts))
+words = [set(p.lower().split()) for p in prompts]
+triples = [{" ".join(w[i:i + 3]) for i in range(max(len(w) - 2, 1))}
+           for w in (p.lower().split() for p in prompts)]
+print("kept (word sets, 3-word shingles):", count_kept(words), count_kept(triples))
 ```
 
 ```text
-kept with word sets <n> of 2000
-kept with 3-word shingles <n> of 2000
+kept (word sets, 3-word shingles): <n> <n>
 ```
 
 ```python
@@ -929,7 +944,7 @@ The roadmap order was not pasted, so this order is assumed.
 
 **Checked on the web.** The FineWeb parameters and probabilities (5-grams, 112 hashes, 14 by 8, 56, 77 and 92 percent at 0.7, 0.75 and 0.8, and 98.8 percent at 0.85), the global versus per-snapshot dedup result, the Lee et al. claims (over 1 percent copied, tenfold less, up to 19 percent smaller, 4.6 and 14.4 percent overlap), the SemDeDup recipe and its C4 efficiency claim, the datasketch 2.0.0 scheme change, and the encoder's license tag.
 
-**From general knowledge, not verified here.** The rule of three, the claim that two equal mixture humps need no extra assumption, Python's per-run string `hash`, the mean pooling recipe for the encoder, and the roughly 22 million parameters of the encoder.
+**From general knowledge, not verified here.** The rule of three, Python's per-run string `hash`, the mean pooling recipe for the encoder, and the roughly 22 million parameters of the encoder.
 
 **Corrections to the source note.**
 
