@@ -1,4 +1,4 @@
-# **Stage 03 Data Engineering**
+# **Stage 03 Data Engineering: Index**
 
 **Outcome of the stage.** A dataset you can defend: sourced, licensed, deduplicated, decontaminated, format-checked, versioned and documented. **Exit criterion.** A public dataset on the Hub with a data card, a license table, a decontamination report, and a held-out split that no training run ever touched.
 
@@ -26,8 +26,8 @@ This file is the map for the stage. It lists the notes in reading order, where e
 | 02 | [02-formats-and-chat-templates.md](02-formats-and-chat-templates.md) | storage formats, chat templates, loss masks | done |
 | 03 | [03-dataset-catalog-and-licenses.md](03-dataset-catalog-and-licenses.md) | where data comes from, what you may use, license audit | done |
 | 04 | [04-quality-and-deduplication.md](04-quality-and-deduplication.md) | exact, near and semantic duplicates, MinHash, LSH, reading rows | done |
-| 05 | 05-decontamination.md | removing evaluation leaks | next |
-| 06 | 06-synthetic-data.md | rubric generation, model collapse | planned |
+| 05 | [05-decontamination.md](05-decontamination.md) | train-test overlap, n-gram coverage, Min-K%, harness status | done |
+| 06 | 06-synthetic-data.md | rubric generation, model collapse | next |
 | 07 | 07-pii-and-eu-ai-act.md | scrubbing, provenance, documentation | planned |
 | 08 | 08-domain-dataset-and-splits.md | build, split, version | planned |
 | 09 | 09-preflight-and-acceptance-gate.md | the exit checklist | planned |
@@ -136,8 +136,13 @@ Under template A, r1 has 12 tokens and 3 trained tokens. Under template B it has
 | $\kappa$, $n_{\text{band}}$, $n_{\text{row}}$, $P_{\text{cand}}$ | hash functions, LSH bands, rows per band, candidate probability | note 04 |
 | $w_{\text{sig}}$, $M_{\text{sig}}$, $d$, $w_{\text{sim}}$, $B_{\text{blk}}$ | signature entry bytes, signature memory, embedding size, similarity value bytes, block rows | note 04 |
 | $\lambda$, $n_{\text{read}}$ | defect rate, rows read by hand | note 04 |
+| $Q$, $X$, $\nu$, $\mathcal{G}_\nu$ | evaluation row, training row, n-gram size, gram set | note 05 |
+| $\gamma$, $\chi$, $\chi_{\min}$ | containment, token coverage, coverage cut | note 05 |
+| $G_Q$, $G_X$, $F$ | evaluation n-grams indexed, training n-grams scanned, expected false matches | note 05 |
+| $\varphi$, $a_0$, $a_1$, $A$, $I$, $N_Q$ | leaked share, clean and leaked accuracy, observed accuracy, inflation, evaluation rows | note 05 |
+| $\alpha$, $S_\alpha$ | Min-K% share kept, Min-K% score | note 05 |
 
-**Reading tips.** The letter $t$ always means a token position. Shares use Greek letters ($\rho$ rows, $\sigma$ tokens) so they never clash with $t$ or $T$. The letter $c$ means a constant overhead in note 02, while $c_k$ means a row count in note 01. The letter $q$ is the mixing share so it never clashes with $\pi_\theta$. The letter $g$ is a license group and nothing else. The letter $\kappa$ is the number of hash functions, so it never clashes with $k$ from note 02. The planned symbols $\beta$ and $\eta$ are not used in this stage.
+**Reading tips.** The letter $t$ always means a token position. Shares use Greek letters ($\rho$ rows, $\sigma$ tokens) so they never clash with $t$ or $T$. The letter $c$ means a constant overhead in note 02, while $c_k$ means a row count in note 01. The letter $q$ is the mixing share so it never clashes with $\pi_\theta$. The letter $g$ is a license group and nothing else. The letter $\nu$ is the n-gram size, and the threshold is $\chi_{\min}$ so it never clashes with the parameters $\theta$. The letter $\kappa$ is the number of hash functions, so it never clashes with $k$ from note 02. The planned symbols $\beta$ and $\eta$ are not used in this stage.
 
 ---
 
@@ -262,6 +267,8 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 | 04 | The source's dedup code strips whitespace only, special-cases row 0, depends on row order and uses single words, and its 0.8 threshold with 128 permutations means 9 bands of 13 rows, which catches about 40 percent of pairs at exactly 0.8. |
 | 04 | datasketch 2.0.0 changed the default permutation scheme to 32 bits, so saved indexes must be rebuilt. |
 | 04 | Reading 100 rows only bounds a defect rate near 3 percent, so the source's "bad in 100 means bad in 1M" holds only for common defects. |
+| 05 | The harness flag --decontamination_ngrams_path was removed in March 2024 and is absent from lm_eval 0.4.13, whose evaluator never reads decontamination, so the source's harness procedure and lab 4 cannot run as written. |
+| 05 | The source gives no n-gram size or cut. Use and record a rule such as Tulu 3's 8-gram matching with coverage above 0.5 on prompts, and drop datasets that overlap more than 2 percent of an evaluation. |
 
 **Not checked in note 03.** ToolBench, ToolACE, AIME, ARC-AGI, the multimodal sets, Wikipedia, Common Crawl and The Stack licenses.
 
