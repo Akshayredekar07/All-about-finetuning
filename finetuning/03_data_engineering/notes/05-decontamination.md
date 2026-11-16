@@ -1,43 +1,10 @@
 # **Decontamination**
 
-**Scope.** Stage 03 Data Engineering, note 05 of 09. Note 04 removed repeats inside one dataset. This note removes overlap between your training data and the evaluation sets you will report scores on. It covers exact matching, n-gram overlap in the style of GPT-3 and Tulu 3, what each method misses, a model-based check for memorized text, how much a leak can move a score, and what the evaluation harness does today. Synthetic data, which can carry leaks of its own, is covered in note 06. The held-out split of your own dataset is covered in note 08.
+*Stage 03 Data Engineering, note 05. Follows note 04, which removed repeats inside one dataset.*
 
-**Idea.** A score on a benchmark measures skill only if the model has not seen the answers. If a benchmark row, or a close copy of it, sits in the training data, the score measures memory. N-gram matching finds copies and light edits, and it cannot find a paraphrase. So decontamination is a set of tests with known blind spots, and the last line of defense is an evaluation set that nobody has seen.
+## **1. The Running Example: A Row Copied From the Exam**
 
-**Where the numbers come from.**
-
-- Hand-calculated: every worked example in sections 5, 6 and 9.
-- Measured: produced by the verification script on tiny CPU values using only the Python standard library. One extra CPU check searched the `lm_eval` 0.4.13 package, downloaded from PyPI in the sandbox, for decontamination code.
-- Expected: how the notebook cells should behave. The sandbox has no GPU and cannot reach the Hub, so the cells were not run, and printed outputs are formats unless a number says it was measured.
-- Illustrative: the 100 n-grams per evaluation row, the 300 token mean row, the 5 percent leak rate, the accuracies 0.40 and 0.90, and the 20 percent logits budget.
-- From sources: the GPT-3, Tulu 3, Yang et al. and Min-K% Prob facts in section 18.
-
-**Contents.**
-
-1. The Running Example: A Row Copied From the Exam
-2. Vocabulary Mapped to the Story
-3. Three Core Ideas
-4. The Definition in Plain Words, Then Formal
-5. Why the Previous Notes Are Not Enough
-6. The Extra Classic Example: Three Ways a Leak Can Hide
-7. Detecting Leaks: Exact Match, N-grams, Token Coverage and Model Scores
-8. The Decontamination Procedure
-9. Math Notation, Explained Step by Step
-10. Experiment Guide for Jupyter on GPU
-11. Limits and When It Fails
-12. Common Pitfalls
-13. Connection to Language Models and Modern AI
-14. Connection to the Next Topic
-15. Glossary
-16. Self-Test With Answers
-17. Key Points
-18. Sources and Verification
-
----
-
-## 1. The Running Example: A Row Copied From the Exam
-
-After note 04 the toy training set has five rows: r1, r3, r4, r5 and r6. Now add a tiny evaluation set with two rows.
+After note 04 the toy training set has five rows: r1, r3, r4, r5 and r6. Now add a tiny **evaluation set** (rows used to measure the model, never to train it) with two rows.
 
 | id | text | words |
 |---|---|---|
@@ -58,41 +25,21 @@ flowchart LR
 
 **The new ingredient.** Note 04 compared rows with rows of the same dataset. Here the comparison is between two datasets, and it is one-sided: the question is how much of the evaluation row appears in a training row.
 
----
-
-## 2. Vocabulary Mapped to the Story
-
-| in the story | name | meaning |
-|---|---|---|
-| r5 equals e1 | **contamination** | evaluation content that also appears in training data |
-| e1 and e2 | **evaluation set** | rows used to measure the model, never to train it |
-| three words in a row | **n-gram** | a run of $\nu$ consecutive words |
-| the set of all runs of e1 | **gram set** | the distinct n-grams of one row |
-| how much of e1 is inside r5 | **containment** | shared n-grams divided by the n-grams of the evaluation row |
-| words of e1 covered by a shared run | **token coverage** | the share of evaluation tokens that sit inside a shared n-gram |
-| the cut for removal | **overlap threshold** | the coverage above which a row is flagged |
-| a copy with new words | **rephrased sample** | a row with the same meaning but different wording |
-| a stored fingerprint of an n-gram | **hash** | a fixed-size number made from the text |
-| a leak that raises the score | **score inflation** | observed accuracy minus clean accuracy |
-| a test the model never saw | **fresh evaluation set** | rows written or collected after training data was fixed |
+| **What you will learn** |
+|---|
+| How to find evaluation rows hiding in your training data. |
+| Why word matching misses a paraphrase, how a leak inflates a score, and what the evaluation harness really does. |
+| How to scan on a CPU, score with a model on a GPU, and test the pipeline with planted copies. |
 
 ---
 
-## 3. Three Core Ideas
+## **2. How Leaks Are Found**
 
-**Idea 1. One-sided overlap is what matters.** The question is how much of the evaluation row is inside a training row, not how similar the two rows are. A short evaluation row hidden inside a long training row has low Jaccard similarity and full containment.
-
-**Idea 2. Every method has a blind spot.** Exact match misses anything embedded or edited. N-grams miss paraphrase. Embeddings are hard to calibrate. Nothing here proves a benchmark is clean.
-
-**Idea 3. A leak can hide inside the noise of the score.** On a 164 problem benchmark, a 2.5 point inflation is smaller than the usual error of the score (section 9.6).
-
----
-
-## 4. The Definition in Plain Words, Then Formal
+### **2.1 The Definition in Plain Words, Then Formal**
 
 **Plain words.** A training row is **contaminated** with respect to an evaluation set when enough of an evaluation row appears in it. **Decontamination** removes those training rows, or the whole training dataset, and records what was removed.
 
-**Formal.** Let $Q$ be an evaluation row and $X$ a training row. Cut both into n-grams of $\nu$ words. Let $\mathcal{G}_\nu(Q)$ be the gram set of $Q$ and $L_Q$ its length in words. The containment and the token coverage are
+**Formal.** Let $Q$ be an evaluation row and $X$ a training row. Cut both into **n-grams** (a run of $\nu$ consecutive words) of $\nu$ words. Let $\mathcal{G}_\nu(Q)$ be the **gram set** (the distinct n-grams of one row) of $Q$ and $L_Q$ its length in words. The **containment** (shared n-grams divided by the n-grams of the evaluation row) and the **token coverage** (the share of evaluation tokens that sit inside a shared n-gram) are
 
 $$\gamma(Q, X) = \frac{\lvert \mathcal{G}_\nu(Q) \cap \mathcal{G}_\nu(X) \rvert}{\lvert \mathcal{G}_\nu(Q) \rvert} \qquad \chi(Q, X) = \frac{\#\{\text{tokens of } Q \text{ inside a shared n-gram}\}}{L_Q}$$
 
@@ -100,9 +47,140 @@ A training row is flagged when $\chi(Q, X) > \chi_{\min}$ for some evaluation ro
 
 **Check.** Both measures divide by the evaluation side. Neither depends on how long the training row is.
 
+### **2.2 Exact match**
+
+**Intuition.** Turn each normalized evaluation row and each training row into a **hash** (a fixed-size number made from the text), a fixed-size fingerprint. Equal hashes are the same row.
+
+**Precise statement.** Lowercase, collapse whitespace, hash with SHA-256, compare. This is the exact pass of note 04, run across two datasets.
+
+```text
+keys = { hash(normalize(row)) for each evaluation row }
+flag every training row whose key is in keys
+```
+
+**Worked example.** r5 equals e1, so it is flagged. x1, x2 and x3 are not.
+
+**Beginner trap.** Calling the benchmark clean after this pass. It finds only identical rows.
+
+### **2.3 N-gram overlap, any match (GPT-3)**
+
+**Intuition.** If a long enough run of words appears in both, the overlap is unlikely to be chance.
+
+**Precise statement.** GPT-3 defines a gram as a lowercase, whitespace-delimited word with no punctuation. A benchmark example is dirty if it shares any $\nu$-gram with any training document. For the overlap analysis $\nu$ is the 5th percentile example length in words, clipped to the range 8 to 13. For filtering training data, the 13-gram plus a 200 character window around it was removed, which splits the document. Pieces under 200 characters were dropped, documents split into more than 10 pieces were removed, and 13-grams matching more than 10 training documents were ignored as common phrases.
+
+```text
+for each training document:
+    for each n-gram in it:
+        if n-gram is in the evaluation index and in fewer than 11 documents:
+            remove it and a 200 character window, splitting the document
+    drop pieces under 200 characters
+    if split into more than 10 pieces: drop the document
+```
+
+**Worked example.** Toy rows with $\nu = 3$: r5, x1 and x2 share at least one trigram with e1, so all are flagged. x3 shares none.
+
+**Read this honestly.** OpenAI's filtering had a bug that removed overlaps only partly, mostly for long documents such as books. Retraining was too expensive, so the paper measured the effect instead. A detector that runs is not the same as a detector that works.
+
+**Beginner trap.** Setting $\nu$ too small. Section 6.4 shows a false match at $\nu = 2$.
+
+**When to use.** When you want a conservative flag and can accept some false positives.
+
+### **2.4 Token coverage with a threshold (Tulu 3)**
+
+**Intuition.** Measure how much of the evaluation row sits inside shared runs, and flag when it is more than half.
+
+**Precise statement.** Tulu 3 uses 8-gram matching on prompts only, following Llama 3 and a second paper, because completions in training data are often regenerated. A test token matches a training row when the two share an 8-gram that contains the token. A test instance overlaps a training instance when more than 50 percent of its tokens match. A training dataset is contaminated when it overlaps more than 2 percent of the instances of any evaluation. Datasets contaminated with the unseen evaluations were removed whole. For development evaluations, the whole dataset was removed if that did not hurt the model, and only the matching rows otherwise.
+
+```text
+index the n-grams of every evaluation row, remembering which row each came from
+for each training prompt (every user turn):
+    for each evaluation row it shares an n-gram with:
+        coverage = covered tokens of the evaluation row / its length
+        flag the training row if coverage > 0.5
+dataset is contaminated if flagged evaluation rows > 2 percent of that evaluation
+```
+
+**Worked example.** Toy rows with $\nu = 3$: r5 and x1 have coverage 1.0, and x2 has 0.7143, so all three pass a 0.5 cut. At a cut of 0.75, x2 is not flagged.
+
+**Beginner trap.** Checking only the first user turn of a chat. Check every user turn.
+
+**When to use.** As the default for instruction data.
+
+### **2.5 Rephrased samples and semantic methods**
+
+**Rephrased samples** in short: a row with the same meaning but different wording. **Intuition.** Meaning can survive when words do not.
+
+**Precise statement.** Yang et al. show that rephrased or translated benchmark samples slip past n-gram overlap, and that models trained on them reach very high scores. Llama 2 13B on MMLU went from 54.8 to 89.9 with rephrased questions, GSM8K from 28.7 to 95.3, and CodeLlama 13B on HumanEval from 36.0 to 81.1. On rephrased HumanEval their 10-gram test scored an F1 of 0, and embedding similarity and an LLM-based detector did better. Tulu 3 tried embedding matching and dropped it, because it was hard to tell similar subject matter from real paraphrase.
+
+**Worked example.** x3 shares no trigram with e1, so every n-gram method returns 0.
+
+**Beginner trap.** Concluding that a zero from an n-gram test means no contamination.
+
+**When to use.** For high-stakes benchmarks, add an embedding search with a person reading the top matches.
+
+### **2.6 A model-based check: Min-K% Prob**
+
+**Intuition.** A model finds text it saw in training less surprising, and it has fewer very unlikely words in it.
+
+**Precise statement.** For a text of tokens, take the log-probability of each token. Keep the lowest $\alpha$ share and average them. A higher score means the text looks more familiar to the model. The paper found $\alpha = 20$ percent best in its sweep, and an average AUC of 0.72 on its WikiMIA benchmark, 7.4 percent above the best baseline.
+
+```text
+logprobs = log p(token t given earlier tokens) for each token t
+lowest = the alpha share of logprobs with the smallest values
+score = mean(lowest)
+```
+
+**Worked example.** Section 6.7 on eight illustrative token log-probabilities.
+
+**Read this honestly.** An AUC of 0.72 is modest. The score is a hint about one model and one text, and it cannot clear a benchmark. It also works best on fixed-length inputs.
+
+**When to use.** To ask whether the base model you will evaluate has probably seen your evaluation rows, when you cannot see its training data.
+
+### **2.7 What the evaluation harness does today**
+
+The source note tells you to run the EleutherAI harness with `--decontamination_ngrams_path` and to read the metrics with the `decontaminate` suffix. That does not work on current releases.
+
+| check | result |
+|---|---|
+| the flag in `lm_eval` 0.4.13 | not found anywhere in the package (measured) |
+| the flag's history | removed in a merged pull request in March 2024, with the note that no alternative path existed |
+| `evaluator.py` in 0.4.13 | no mention of decontamination (measured) |
+| the `decontaminate` filter in 0.4.13 | its `apply` method is `pass` (measured) |
+| the docs page | still describes the feature, and its usage example shows no flag |
+| the code that remains | `get_train_overlap` and the `Janitor` class exist but nothing calls them |
+
+An open issue from October 2026 says the same about the master branch, and says the 825 GB of Pile n-gram files the documented procedure needs can no longer be downloaded. That last point is second-hand, and I did not run the harness itself.
+
+```mermaid
+flowchart LR
+    A["Source note: pass the ngrams path flag"] --> B["Flag removed in March 2024"]
+    B --> C["evaluator.py never reads decontamination"]
+    C --> D["No decontaminate metrics appear"]
+    D --> E["Run your own scan before training"]
+```
+
+**Takeaway.** Do the decontamination yourself, before training, and record the counts. Do not rely on a harness flag.
+
+### **2.8 Comparison and assumptions**
+
+| method | catches | misses | cost | assumption |
+|---|---|---|---|---|
+| exact hash | identical rows | anything edited or embedded | one pass | normalization is right |
+| n-gram any match, $\nu$ 8 to 13 | copies, embedded text | paraphrase, translation | one scan plus a small index | $\nu$ is long enough to avoid chance matches |
+| token coverage above 0.5 | copies and light edits | paraphrase | same as above | the cut suits your data |
+| embeddings plus reading | many paraphrases | translation, close but different questions | encoder on GPU | someone reads the matches |
+| Min-K% Prob | text the model likely saw | most unseen leaks and some false alarms | one forward pass per row | you have the model and a reference to compare against |
+| a fresh private test set | everything that was never published | nothing it never saw | writing new rows | it stays private |
+
 ---
 
-## 5. Why the Previous Notes Are Not Enough
+## **3. Why It Matters, With Numbers**
+
+Three ideas to keep in mind:
+
+- One-sided overlap is what matters.
+- Every method has a blind spot.
+- A leak can hide inside the noise of the score.
 
 Notes 01 to 04 give clean shapes, templates, licenses and no repeats. Row r5 is still in the data, and the evaluation would count it as seen.
 
@@ -119,7 +197,7 @@ Hand check: one of five rows is flagged, so $4/5 = 0.8$ of the rows remain. One 
 
 ---
 
-## 6. The Extra Classic Example: Three Ways a Leak Can Hide
+## **4. The Extra Classic Example: Three Ways a Leak Can Hide**
 
 The running example has one clean copy. Real leaks are messier. Add three probe rows that are not part of the six. All three come from e1.
 
@@ -159,136 +237,7 @@ For x2 the shared trigrams are "what does dropout", "does dropout do" and "dropo
 
 ---
 
-## 7. Detecting Leaks: Exact Match, N-grams, Token Coverage and Model Scores
-
-### 7.1 Exact match
-
-**Intuition.** Hash each normalized evaluation row and each training row. Equal hashes are the same row.
-
-**Precise statement.** Lowercase, collapse whitespace, hash with SHA-256, compare. This is the exact pass of note 04, run across two datasets.
-
-```text
-keys = { hash(normalize(row)) for each evaluation row }
-flag every training row whose key is in keys
-```
-
-**Worked example.** r5 equals e1, so it is flagged. x1, x2 and x3 are not.
-
-**Beginner trap.** Calling the benchmark clean after this pass. It finds only identical rows.
-
-### 7.2 N-gram overlap, any match (GPT-3)
-
-**Intuition.** If a long enough run of words appears in both, the overlap is unlikely to be chance.
-
-**Precise statement.** GPT-3 defines a gram as a lowercase, whitespace-delimited word with no punctuation. A benchmark example is dirty if it shares any $\nu$-gram with any training document. For the overlap analysis $\nu$ is the 5th percentile example length in words, clipped to the range 8 to 13. For filtering training data, the 13-gram plus a 200 character window around it was removed, which splits the document. Pieces under 200 characters were dropped, documents split into more than 10 pieces were removed, and 13-grams matching more than 10 training documents were ignored as common phrases.
-
-```text
-for each training document:
-    for each n-gram in it:
-        if n-gram is in the evaluation index and in fewer than 11 documents:
-            remove it and a 200 character window, splitting the document
-    drop pieces under 200 characters
-    if split into more than 10 pieces: drop the document
-```
-
-**Worked example.** Toy rows with $\nu = 3$: r5, x1 and x2 share at least one trigram with e1, so all are flagged. x3 shares none.
-
-**Read this honestly.** OpenAI's filtering had a bug that removed overlaps only partly, mostly for long documents such as books. Retraining was too expensive, so the paper measured the effect instead. A detector that runs is not the same as a detector that works.
-
-**Beginner trap.** Setting $\nu$ too small. Section 9.4 shows a false match at $\nu = 2$.
-
-**When to use.** When you want a conservative flag and can accept some false positives.
-
-### 7.3 Token coverage with a threshold (Tulu 3)
-
-**Intuition.** Measure how much of the evaluation row sits inside shared runs, and flag when it is more than half.
-
-**Precise statement.** Tulu 3 uses 8-gram matching on prompts only, following Llama 3 and a second paper, because completions in training data are often regenerated. A test token matches a training row when the two share an 8-gram that contains the token. A test instance overlaps a training instance when more than 50 percent of its tokens match. A training dataset is contaminated when it overlaps more than 2 percent of the instances of any evaluation. Datasets contaminated with the unseen evaluations were removed whole. For development evaluations, the whole dataset was removed if that did not hurt the model, and only the matching rows otherwise.
-
-```text
-index the n-grams of every evaluation row, remembering which row each came from
-for each training prompt (every user turn):
-    for each evaluation row it shares an n-gram with:
-        coverage = covered tokens of the evaluation row / its length
-        flag the training row if coverage > 0.5
-dataset is contaminated if flagged evaluation rows > 2 percent of that evaluation
-```
-
-**Worked example.** Toy rows with $\nu = 3$: r5 and x1 have coverage 1.0, and x2 has 0.7143, so all three pass a 0.5 cut. At a cut of 0.75, x2 is not flagged.
-
-**Beginner trap.** Checking only the first user turn of a chat. Check every user turn.
-
-**When to use.** As the default for instruction data.
-
-### 7.4 Rephrased samples and semantic methods
-
-**Intuition.** Meaning can survive when words do not.
-
-**Precise statement.** Yang et al. show that rephrased or translated benchmark samples slip past n-gram overlap, and that models trained on them reach very high scores. Llama 2 13B on MMLU went from 54.8 to 89.9 with rephrased questions, GSM8K from 28.7 to 95.3, and CodeLlama 13B on HumanEval from 36.0 to 81.1. On rephrased HumanEval their 10-gram test scored an F1 of 0, and embedding similarity and an LLM-based detector did better. Tulu 3 tried embedding matching and dropped it, because it was hard to tell similar subject matter from real paraphrase.
-
-**Worked example.** x3 shares no trigram with e1, so every n-gram method returns 0.
-
-**Beginner trap.** Concluding that a zero from an n-gram test means no contamination.
-
-**When to use.** For high-stakes benchmarks, add an embedding search with a person reading the top matches.
-
-### 7.5 A model-based check: Min-K% Prob
-
-**Intuition.** A model finds text it saw in training less surprising, and it has fewer very unlikely words in it.
-
-**Precise statement.** For a text of tokens, take the log-probability of each token. Keep the lowest $\alpha$ share and average them. A higher score means the text looks more familiar to the model. The paper found $\alpha = 20$ percent best in its sweep, and an average AUC of 0.72 on its WikiMIA benchmark, 7.4 percent above the best baseline.
-
-```text
-logprobs = log p(token t given earlier tokens) for each token t
-lowest = the alpha share of logprobs with the smallest values
-score = mean(lowest)
-```
-
-**Worked example.** Section 9.7 on eight illustrative token log-probabilities.
-
-**Read this honestly.** An AUC of 0.72 is modest. The score is a hint about one model and one text, and it cannot clear a benchmark. It also works best on fixed-length inputs.
-
-**When to use.** To ask whether the base model you will evaluate has probably seen your evaluation rows, when you cannot see its training data.
-
-### 7.6 What the evaluation harness does today
-
-The source note tells you to run the EleutherAI harness with `--decontamination_ngrams_path` and to read the metrics with the `decontaminate` suffix. That does not work on current releases.
-
-| check | result |
-|---|---|
-| the flag in `lm_eval` 0.4.13 | not found anywhere in the package (measured) |
-| the flag's history | removed in a merged pull request in March 2024, with the note that no alternative path existed |
-| `evaluator.py` in 0.4.13 | no mention of decontamination (measured) |
-| the `decontaminate` filter in 0.4.13 | its `apply` method is `pass` (measured) |
-| the docs page | still describes the feature, and its usage example shows no flag |
-| the code that remains | `get_train_overlap` and the `Janitor` class exist but nothing calls them |
-
-An open issue from October 2026 says the same about the master branch, and says the 825 GB of Pile n-gram files the documented procedure needs can no longer be downloaded. That last point is second-hand, and I did not run the harness itself.
-
-```mermaid
-flowchart LR
-    A["Source note: pass the ngrams path flag"] --> B["Flag removed in March 2024"]
-    B --> C["evaluator.py never reads decontamination"]
-    C --> D["No decontaminate metrics appear"]
-    D --> E["Run your own scan before training"]
-```
-
-**Takeaway.** Do the decontamination yourself, before training, and record the counts. Do not rely on a harness flag.
-
-### 7.7 Comparison and assumptions
-
-| method | catches | misses | cost | assumption |
-|---|---|---|---|---|
-| exact hash | identical rows | anything edited or embedded | one pass | normalization is right |
-| n-gram any match, $\nu$ 8 to 13 | copies, embedded text | paraphrase, translation | one scan plus a small index | $\nu$ is long enough to avoid chance matches |
-| token coverage above 0.5 | copies and light edits | paraphrase | same as above | the cut suits your data |
-| embeddings plus reading | many paraphrases | translation, close but different questions | encoder on GPU | someone reads the matches |
-| Min-K% Prob | text the model likely saw | most unseen leaks and some false alarms | one forward pass per row | you have the model and a reference to compare against |
-| a fresh private test set | everything that was never published | nothing it never saw | writing new rows | it stays private |
-
----
-
-## 8. The Decontamination Procedure
+## **5. The Decontamination Procedure**
 
 ```mermaid
 flowchart LR
@@ -301,7 +250,7 @@ flowchart LR
 ```
 
 1. List every evaluation set you will report, before you build the training set.
-2. Index the n-grams of the evaluation rows. This index is small, and section 9.5 shows how much smaller it is than an index of the training data.
+2. Index the n-grams of the evaluation rows. This index is small, and section 6.5 shows how much smaller it is than an index of the training data.
 3. Scan the training prompts, every user turn of every chat.
 4. Flag rows by any overlap at $\nu \ge 8$, and by coverage above 0.5. Record both.
 5. Read 20 flagged rows and 20 unflagged rows with partial overlap.
@@ -314,11 +263,11 @@ flowchart LR
 
 ---
 
-## 9. Math Notation, Explained Step by Step
+## **6. The Math, Step by Step**
 
 This section lists the new symbols and every formula, with a worked example. Cover the steps, do the calculation yourself, then compare with the boxed value. The per-token loss and its gradient are derived in note 01 section 9.4, and this note reuses the log-probability $\log p = -\ell_t$ from it.
 
-### 9.1 Notation table
+### **6.1 Notation table**
 
 | symbol | read aloud | meaning | in the running example |
 |---|---|---|---|
@@ -341,7 +290,7 @@ This section lists the new symbols and every formula, with a worked example. Cov
 
 **Reading tips.** The letter $\nu$ is the n-gram size, so it never clashes with $n$ (turns in note 02) or $n_k$ (rows in note 01). The symbols $\gamma$ and $\chi$ are used so they do not clash with $c$ (overhead in note 02) or $\sigma$ (token share in note 01). The threshold is $\chi_{\min}$ and not $\theta$, which stays the model parameters.
 
-### 9.2 How many n-grams a row has
+### **6.2 How many n-grams a row has**
 
 $$G = L - \nu + 1$$
 
@@ -358,7 +307,7 @@ G_{x1} &= 11 - 3 + 1 = \boxed{9}
 
 **Beginner trap.** Forgetting that a repeated n-gram counts once in a set.
 
-### 9.3 Containment and token coverage
+### **6.3 Containment and token coverage**
 
 $$\gamma(Q, X) = \frac{\lvert \mathcal{G}_\nu(Q) \cap \mathcal{G}_\nu(X) \rvert}{\lvert \mathcal{G}_\nu(Q) \rvert} \qquad \chi(Q, X) = \frac{\text{covered tokens of } Q}{L_Q}$$
 
@@ -384,9 +333,9 @@ J &= \frac{5}{5 + 9 - 5} = \frac{5}{9} = \boxed{0.5556}
 
 **Beginner trap.** Using Jaccard from note 04 across datasets. It dilutes a short evaluation row hidden in a long training row.
 
-**Check.** The script matches the table in section 6 (measured).
+**Check.** The script matches the table in section 4 (measured).
 
-### 9.4 The cut and the n-gram size
+### **6.4 The cut and the n-gram size**
 
 $$\text{flag } X \text{ if } \chi(Q, X) > \chi_{\min} \qquad \nu \text{ large enough that chance overlaps are rare}$$
 
@@ -412,7 +361,7 @@ At $\nu = 2$ any-match would flag r3 falsely. This is why GPT-3 used a minimum o
 
 **Beginner trap.** Choosing the cut after seeing which rows you would lose.
 
-### 9.5 Hash width and index size
+### **6.5 Hash width and index size**
 
 $$F = \frac{G_Q \cdot G_X}{2^{\text{bits}}} \qquad M_{\text{index}} = G \cdot 8 \ \text{bytes}$$
 
@@ -439,11 +388,11 @@ Memory, indexing the evaluation side: $16400 \times 8 = \boxed{131{,}200}$ bytes
 
 **Beginner trap.** Indexing the training data. Index the small evaluation set and stream the training rows past it. This is CPU memory, not GPU memory.
 
-### 9.6 How much a leak inflates a score
+### **6.6 How much a leak inflates a score**
 
 $$A = (1 - \varphi)\,a_0 + \varphi\,a_1 \qquad I = A - a_0 = \varphi\,(a_1 - a_0) \qquad \text{SE} = \sqrt{\frac{A\,(1 - A)}{N_Q}}$$
 
-**What it says.** The observed accuracy mixes clean and leaked rows. The inflation is the leaked share times the accuracy gap. The standard error is the usual noise of an accuracy.
+**Score inflation** in short: observed accuracy minus clean accuracy. **What it says.** The observed accuracy mixes clean and leaked rows. The inflation is the leaked share times the accuracy gap. The standard error is the usual noise of an accuracy.
 
 **Worked example.** $\varphi = 0.05$, $a_0 = 0.40$, $a_1 = 0.90$:
 
@@ -467,9 +416,9 @@ So 5 percent of 164 problems is 8.2 leaked problems, and the 2.5 point inflation
 
 **Beginner trap.** Comparing the full score with a clean-subset score and calling a small gap proof. The clean subset can differ in difficulty from the whole set, a limitation GPT-3's authors raise themselves.
 
-**Check.** Section 18 lists the benchmark sizes used here (164 measured on the Hub, 1,319 from 8,792 total minus 7,473 training rows).
+**Check.** Section 11 lists the benchmark sizes used here (164 measured on the Hub, 1,319 from 8,792 total minus 7,473 training rows).
 
-### 9.7 The Min-K% score
+### **6.7 The Min-K% score**
 
 $$S_\alpha(x) = \frac{1}{\lvert E_\alpha \rvert} \sum_{t \in E_\alpha} \log p(x_t \mid x_{<t})$$
 
@@ -495,7 +444,7 @@ For comparison, the plain mean log-probability is $-0.85$ for the seen text and 
 
 **Beginner trap.** Reading one score alone. A threshold needs reference texts known to be unseen.
 
-### 9.8 The GPU ladder: which model can score, and how big a batch
+### **6.8 The GPU ladder: which model can score, and how big a batch**
 
 $$P_{\max} = \frac{0.85 \cdot \text{VRAM}}{2} \qquad B_{\max} = \left\lfloor \frac{0.2 \cdot \text{VRAM}}{4\,V\,T} \right\rfloor$$
 
@@ -526,7 +475,7 @@ A batch of 16 at $T = 512$ builds a 32-bit logits copy of $16 \times 512 \times 
 
 **Beginner trap.** Forgetting that the scoring job is cheap. The expensive part of decontamination is the CPU scan of the training data.
 
-### 9.9 All formulas and answers
+### **6.9 All formulas and answers**
 
 | formula | input | answer |
 |---|---|---|
@@ -543,7 +492,7 @@ A batch of 16 at $T = 512$ builds a 32-bit logits copy of $16 \times 512 \times 
 | $S_\alpha$, seen and unseen | $\alpha = 0.25$ | $-2.75$ and $-3.80$ |
 | $P_{\max}$ on 48 GB | $0.85 \times 48 / 2$ | 20.4 B |
 
-### 9.10 Pen-and-paper rules
+### **6.10 Pen-and-paper rules**
 
 1. Divide by the evaluation side, never the training side.
 2. Count a repeated n-gram once.
@@ -558,7 +507,7 @@ A batch of 16 at $T = 512$ builds a 32-bit logits copy of $16 \times 512 \times 
 
 ---
 
-## 10. Experiment Guide for Jupyter on GPU
+## **7. Notebook Experiments on GPU**
 
 These cells run in a GPU notebook: a Lightning AI Studio, a Modal Notebook, or your organization's cluster. They were checked for syntax and not run. Cells 2 to 5 run on the CPU and cells 6 and 7 use the GPU. Run cell 1 first. Cells 5 and 6 reuse names from cell 4, and cell 7 reuses `model` from cell 6.
 
@@ -629,7 +578,7 @@ These two lines were measured on a CPU against `lm_eval` 0.4.13. Your installed 
 
 ```python
 # ── Cell 3. Sanity check: toy n-gram methods ─────────────────────
-#    Reproduce section 6: exact match, containment and coverage
+#    Reproduce section 4: exact match, containment and coverage
 #    Evaluation row e1 against r5, x1, x2 and x3, n = 3 words
 # ─────────────────────────────────────────────────────────────────
 def grams(words, size):
@@ -661,7 +610,7 @@ x2  exact False  containment 0.6000  coverage 0.7143
 x3  exact False  containment 0.0000  coverage 0.0000
 ```
 
-These four lines were measured by the script and match section 6.
+These four lines were measured by the script and match section 4.
 
 ```python
 # ── Cell 4. Index the evaluation side ────────────────────────────
@@ -768,22 +717,22 @@ for batch in [1, 4, 16]:
             scores = torch.log_softmax(model(input_ids=ids).logits.float(), dim=-1)
         torch.cuda.synchronize()
         peak = torch.cuda.max_memory_allocated() / 1e9
-        print(f"B={batch:3d}  peak {peak:6.2f} GB  {batch * 512 / (time.time() - start):9.0f} tok/s")
+        print(f"batch: {batch:3d}  peak: {peak:6.2f} GB  speed: {batch * 512 / (time.time() - start):9.0f} tok/s")
     except torch.cuda.OutOfMemoryError:
-        print(f"B={batch:3d}  out of memory")
+        print(f"batch: {batch:3d}  out of memory")
     scores = None
     torch.cuda.empty_cache()
 ```
 
 ```text
-B=  1  peak <x> GB  <n> tok/s
-B=  4  peak <x> GB  <n> tok/s
-B= 16  peak <x> GB or out of memory
+batch:   1  peak: <x> GB  speed: <n> tok/s
+batch:   4  peak: <x> GB  speed: <n> tok/s
+batch:  16  peak: <x> GB or out of memory
 ```
 
 The 32-bit logits copy at $B = 16$ is $4.98$ GB by hand, so on the 16 and 24 GB tiers expect a peak well above the batch 4 value, and possibly an out-of-memory result.
 
-### 10.1 Results table template
+### **7.1 Results table template**
 
 | GPU tier | largest model to score (cell 1) | $B_{\max}$ at $T=512$ | peak GB at B=4 | peak GB at B=16 or OOM | tok/s at B=4 |
 |---|---|---|---|---|---|
@@ -797,51 +746,46 @@ The 32-bit logits copy at $B = 16$ is $4.98$ GB by hand, so on the 16 and 24 GB 
 
 The CPU results of cells 2 to 5 do not depend on the GPU. Record the flagged-row count and the hit-question count once.
 
-### 10.2 Expected behavior (expected, not yet verified)
+### **7.2 Expected behavior (expected, not yet verified)**
 
 - Cell 2 prints an empty list and `False` on `lm_eval` 0.4.13.
-- Cell 3 matches section 6 exactly.
+- Cell 3 matches section 4 exactly.
 - Cell 5 flags at least the 10 planted rows. Capybara may flag a few more, since GSM8K questions are common on the web.
 - Cell 6 gives a lower score to the reversed text than to the question.
 - Cell 7 peak memory grows with batch size, and the 16 and 24 GB tiers show the most pressure at $B = 16$.
 
-### 10.3 If you run out of memory
+### **7.3 If you run out of memory**
 
 1. Lower the batch size in cell 7, or lower the length $T$.
 2. Take the log-softmax in chunks of rows, not on the whole batch at once.
 3. Keep half precision weights, as cell 6 does, and score a smaller model.
-4. Move to a larger tier, using section 9.8 for the model size.
+4. Move to a larger tier, using section 6.8 for the model size.
 
 GPU and Hub runs are not exactly reproducible, so compare trends, not exact decimals.
 
 ---
 
-## 11. Limits and When It Fails
+## **8. Pitfalls and Limits**
 
-**What the checks need.** The evaluation rows, a consistent normalization, and a person who reads flagged rows.
+**Pitfalls that really bite.**
 
-**Where they fail.**
-
-- N-gram methods miss paraphrase and translation, and the evidence in section 7.4 shows that a model can still be inflated by them.
-- Multiple-choice questions can give false positives when different questions share option patterns, as Yang et al. report.
-- Checking prompts only, as Tulu 3 does, assumes completions are regenerated. If completions are copied, check them too.
-- The Min-K% score has an average AUC of 0.72 and needs a reference group.
-- The harness path in the source note does not exist in current releases (section 7.6).
-- A leak that came in through pretraining is outside your control. You can only measure the model and document the risk.
-- Synthetic data made by a model can carry leaked benchmark content, which Yang et al. found in data generated by GPT-3.5 and GPT-4 (note 06).
-
----
-
-## 12. Common Pitfalls
-
-1. **Relying on the harness flag.** It does not exist in `lm_eval` 0.4.13.
+1. **Relying on the harness flag.** It does not exist in `lm_eval` 0.4.13 (section 2.7).
 2. **An n-gram size that is too small.** Two-word matches flag common phrases.
-3. **A 32-bit hash.** About 1,120 expected false matches at the scale in section 9.5.
+3. **A 32-bit hash.** About 1,120 expected false matches at the scale in section 6.5.
 4. **Indexing the training side.** It is 17,894 times larger than indexing the evaluation side.
 5. **Checking one turn.** Scan every user turn of every chat.
 6. **Reporting a clean subset as the benchmark.** It is a different, smaller set.
 7. **Removing only exact matches.** x1 and x2 get through.
 8. **No planted control.** A silent pipeline might be broken.
+
+**Limits that remain.**
+
+- N-gram methods miss paraphrase and translation, and the evidence in section 2.5 shows that a model can still be inflated by them.
+- Multiple-choice questions can give false positives when different questions share option patterns, as Yang et al. report.
+- Checking prompts only, as Tulu 3 does, assumes completions are regenerated. If completions are copied, check them too.
+- The Min-K% score has an average AUC of 0.72 and needs a reference group.
+- A leak that came in through pretraining is outside your control. You can only measure the model and document the risk.
+- Synthetic data made by a model can carry leaked benchmark content, which Yang et al. found in data generated by GPT-3.5 and GPT-4 (note 06).
 
 **Debugging checklist.**
 
@@ -853,117 +797,46 @@ GPU and Hub runs are not exactly reproducible, so compare trends, not exact deci
 
 ---
 
-## 13. Connection to Language Models and Modern AI
+## **9. How This Shows Up in Language Models**
 
-| topic idea | in a chat model or agent |
-|---|---|
-| train and test overlap | benchmark scores that overstate what a released model can do |
-| n-gram coverage on prompts | the filter open-model teams run on instruction data before training |
-| dataset-level removal | dropping a whole public dataset because it overlaps an evaluation |
-| rephrased leaks | a model tuned on paraphrased tests that scores like a much larger one |
-| fresh private tests | the only evaluation that cannot have leaked |
+- Overlap between training and test data makes benchmark scores overstate what a released model can do.
+- Open model teams run n-gram coverage filters on instruction prompts before training. Tulu 3 used 8-gram matching with a 50 percent coverage cut, dropped datasets that overlapped more than 2 percent of an evaluation, and listed Evol CodeAlpaca (70.7 percent of HumanEval), NuminaMath-TIR (18.2 percent of MATH) and LMSYS-Chat-1M (46.5 percent of AlpacaEval) as contaminated. It included decontaminated versions of the first five datasets in its training sets.
+- Rephrased leaks beat n-grams. Yang et al. trained 7B and 13B models on rephrased benchmark rows and got GPT-4-level scores while 10-gram overlap found nothing. They urge stronger detection and fresh one-time exams.
+- A fresh private test set is the only evaluation that cannot have leaked.
 
-**Point 1. Tulu 3 made it a design constraint.** It checked prompts with 8-gram matching and a 50 percent coverage cut, removed datasets that overlapped more than 2 percent of an evaluation, and listed contaminated public sets: Evol CodeAlpaca with 70.7 percent of HumanEval, NuminaMath-TIR with 18.2 percent of MATH, and LMSYS-Chat-1M with 46.5 percent of AlpacaEval. It did not include the last four contaminated datasets in its table of public datasets.
+The harness documents decontamination, but the current release does not run it, so plan to own this step. Added by me, not in the source note: the one-sided coverage measure, the hash width and index memory calculation, the score inflation versus noise comparison, the Min-K% worked example and the scoring model GPU ladder.
 
-**Point 2. N-grams do not stop rephrasing.** Yang et al. trained 7B and 13B models on rephrased benchmark rows and got GPT-4-level scores while 10-gram overlap found nothing. The paper urges the community to use stronger detection and fresh one-time exams.
-
-**Point 3. The tooling is thinner than the docs suggest.** The harness documents decontamination, but the current release does not run it. Plan to own this step.
-
-**Added (not in the source note).** The one-sided coverage measure, the hash width and index memory calculation, the score inflation versus noise comparison, the Min-K% worked example and the scoring-model GPU ladder.
+**Next.** Note 06 covers synthetic data, which needs the same decontamination.
 
 ---
 
-## 14. Connection to the Next Topic
+## **10. Self-Test**
 
-Next is note 06: synthetic data. It covers rubric-driven generation, ranking with a judge model, model collapse when a model trains on its own output, and why synthetic data needs the same decontamination you just did.
+**Q1.** An evaluation row has the words a to j (10 words). A training row contains the runs "a b c d e" and "h i j", in that order, with other words between them. With $\nu = 3$, find the containment and the token coverage.
 
-| order | topic | what it adds | status |
-|---|---|---|---|
-| 01 | Why data and data shapes | shapes, shares, cheap checks | done |
-| 02 | Formats and chat templates | conversion, templates, masks | done |
-| 03 | Dataset catalog and licenses | sources, licenses, provenance | done |
-| 04 | Quality and deduplication | exact, near and semantic duplicates | done |
-| 05 | Decontamination | removing evaluation leaks | this note |
-| 06 | Synthetic data | rubric generation, model collapse | next |
-| 07 | PII and the EU AI Act | scrubbing and documentation | planned |
-| 08 | Domain dataset and splits | build, split, version | planned |
-| 09 | Pre-flight and acceptance gate | the exit checklist | planned |
+**Q2.** An index holds 1,000 evaluation n-grams, and you scan $10^9$ training n-grams with a 64-bit hash. Find the expected number of false matches.
 
-The roadmap order was not pasted, so this order is assumed.
+**Q3.** Spot the mistake: "The n-gram check flagged nothing, so the benchmark is clean."
 
----
+**Q4.** Spot the mistake: "I ran the harness with `--decontamination_ngrams_path` and saw no `decontaminate` metrics, so my data is clean."
 
-## 15. Glossary
-
-| term | meaning with the running example |
-|---|---|
-| **contamination** | r5 sitting in the training data while e1 is in the exam |
-| **evaluation set** | e1 and e2 |
-| **n-gram** | a run of 3 words in the toy, 8 words in Tulu 3 |
-| **gram set** | the 5 distinct trigrams of e1 |
-| **containment** | 3 of 5 for x2 |
-| **token coverage** | 5 of 7 words of e1 covered for x2 |
-| **overlap threshold** | the 0.5 coverage above which a row is flagged |
-| **rephrased sample** | x3, a paraphrase of e1 that shares no trigram |
-| **hash** | the 8-byte fingerprint stored for each n-gram |
-| **score inflation** | 0.025 on a benchmark with 5 percent leaked rows |
-| **fresh evaluation set** | rows written after the training data was frozen |
-
----
-
-## 16. Self-Test With Answers
-
-**Q1.** A row has 12 words. How many 8-grams does it have?
-
-**Q2.** An evaluation row has the words a to j (10 words). A training row contains the runs "a b c d e" and "h i j", in that order, with other words between them. With $\nu = 3$, find the containment and the token coverage.
-
-**Q3.** An index holds 1,000 evaluation n-grams, and you scan $10^9$ training n-grams with a 64-bit hash. Find the expected number of false matches.
-
-**Q4.** A benchmark has 10 percent leaked rows, clean accuracy 0.50 and leaked accuracy 0.90. Find the inflation.
-
-**Q5.** Five token log-probabilities are $-1, -3, -0.5, -2, -4$. Find the Min-K% score for $\alpha = 0.4$.
-
-**Q6.** Spot the mistake: "The n-gram check flagged nothing, so the benchmark is clean."
-
-**Q7.** Spot the mistake: "I ran the harness with `--decontamination_ngrams_path` and saw no `decontaminate` metrics, so my data is clean."
-
-**Q8.** Why did GPT-3 ignore 13-grams that matched more than 10 training documents?
+**Q5.** Why did GPT-3 ignore 13-grams that matched more than 10 training documents?
 
 **Answers.**
 
-**A1.** $12 - 8 + 1 =$ $\boxed{5}$.
+**A1.** The evaluation trigrams are abc, bcd, cde, def, efg, fgh, ghi, hij, so there are 8. Shared ones: abc, bcd, cde and hij, so 4. Containment is $4/8 =$ $\boxed{0.5}$. The covered words are a to e and h to j, which is 8 of 10, so the coverage is $\boxed{0.8}$.
 
-**A2.** The evaluation trigrams are abc, bcd, cde, def, efg, fgh, ghi, hij, so there are 8. Shared ones: abc, bcd, cde and hij, so 4. Containment is $4/8 =$ $\boxed{0.5}$. The covered words are a to e and h to j, which is 8 of 10, so the coverage is $\boxed{0.8}$.
+**A2.** $\dfrac{1000 \times 10^{9}}{2^{64}} = \dfrac{10^{12}}{1.8447 \times 10^{19}} =$ $\boxed{5.42 \times 10^{-8}}$.
 
-**A3.** $\dfrac{1000 \times 10^{9}}{2^{64}} = \dfrac{10^{12}}{1.8447 \times 10^{19}} =$ $\boxed{5.42 \times 10^{-8}}$.
+**A3.** N-gram tests miss paraphrase and translation. Yang et al. report a 10-gram F1 of 0 on rephrased HumanEval, so a zero tells you only that no copy or light edit was found.
 
-**A4.** $I = 0.10 \times (0.90 - 0.50) =$ $\boxed{0.04}$, four points.
+**A4.** The flag was removed in March 2024, and `lm_eval` 0.4.13 does not read decontamination in its evaluator. Missing metrics mean the step never ran, not that the data is clean.
 
-**A5.** With $\alpha = 0.4$ and 5 tokens, keep 2. The lowest two are $-4$ and $-3$. The score is $(-4 - 3)/2 =$ $\boxed{-3.5}$.
-
-**A6.** N-gram tests miss paraphrase and translation. Yang et al. report a 10-gram F1 of 0 on rephrased HumanEval, so a zero tells you only that no copy or light edit was found.
-
-**A7.** The flag was removed in March 2024, and `lm_eval` 0.4.13 does not read decontamination in its evaluator. Missing metrics mean the step never ran, not that the data is clean.
-
-**A8.** Inspection showed that most of them were common phrases, boilerplate or cultural quotes that the model should learn, not leaks.
+**A5.** Inspection showed that most of them were common phrases, boilerplate or cultural quotes that the model should learn, not leaks.
 
 ---
 
-## 17. Key Points
-
-1. Decontamination compares your training data with the evaluation sets you will report, and the measure divides by the evaluation side.
-2. Exact match finds only copies, n-grams find copies and light edits, and nothing here finds a paraphrase.
-3. Tulu 3's rule is 8-gram matching on prompts with a coverage cut of 50 percent, and a dataset is dropped if it overlaps more than 2 percent of an evaluation.
-4. Index the small evaluation set, hash with 64 bits, and stream the training data past it.
-5. A leak of 5 percent inflates a score by 2.5 points here, which is below one standard error on a 164 problem benchmark.
-6. The harness decontamination flag in the source note does not exist in current releases, so run your own scan.
-7. Plant a canary and check that the pipeline finds it.
-8. Min-K% Prob is a hint about one model, with an average AUC of 0.72.
-9. Write the counts per evaluation set to `results/05-decontamination-report.json`, and keep a fresh private test set.
-
----
-
-## 18. Sources and Verification
+## **11. Sources and Verification**
 
 **Sources used.**
 
@@ -977,7 +850,8 @@ The roadmap order was not pasted, so this order is assumed.
 - `lm_eval` 0.4.13 wheel from PyPI, searched locally
 - Datasets server sizes for openai/gsm8k and openai/openai_humaneval, `https://datasets-server.huggingface.co/size?dataset=<id>`
 
-**Checked by running code.** The verification script reproduced, with asserts, every hand-calculated number in sections 5, 6, 9 and 16: the toy overlap table and Jaccard, the cut and the false overlap at $\nu = 2$, the toy pipeline from five rows to four with one of two evaluation rows hit, the hash collision counts and index sizes, the inflation and standard errors, the Min-K% examples, and the scoring ladder for seven GPU tiers. A separate CPU check searched the `lm_eval` 0.4.13 package: the flag name appears nowhere, `evaluator.py` has no mention of decontamination, and the `decontaminate` filter body is `pass`. All seven cells in section 10 were checked with `ast.parse`.
+
+**Verification note.** A script reproduced every hand-calculated number with asserts, and all seven notebook cells passed `ast.parse`. A separate CPU check searched the `lm_eval` 0.4.13 package: the flag name appears nowhere, `evaluator.py` has no mention of decontamination, and the `decontaminate` filter body is `pass`. The GPU and Hub cells were not run, so their outputs are formats.
 
 **Checked on the web.** The GPT-3 procedure (13-gram, 8 to 13 range, 200 character window, more than 10 pieces, more than 10 documents, the bug), the Tulu 3 method and thresholds and the numbers in its decontamination table and its Appendix B.2 table (re-read in versions 1 and the current PDF), the Yang et al. results and the 10-gram F1 of 0, the Min-K% definition, the $\alpha = 20$ percent choice and the 0.72 average AUC, the harness docs and the merged pull request, and the benchmark sizes.
 
@@ -992,3 +866,22 @@ The roadmap order was not pasted, so this order is assumed.
 - The source says to "read the `*_decontaminate` metrics". The docs describe that suffix, but the current evaluation path does not produce them.
 - Lab 4 of the source (generate n-gram files and run the harness against MMLU, HumanEval and GSM8K) cannot run as written. Use the scan in cells 4 and 5, or the open-instruct scripts that Tulu 3 used, and say so in the lab.
 - The source gives no method, n-gram size or cut. Choose and record them, for example $\nu = 8$ and coverage above 0.5 as in Tulu 3.
+
+---
+
+## **Appendix A. Glossary**
+
+Terms not defined where they first appear:
+
+| term | meaning with the running example |
+|---|---|
+| **overlap threshold** | the 0.5 coverage above which a row is flagged |
+| **fresh evaluation set** | rows written after the training data was frozen |
+
+## **Appendix B. Where the Numbers Come From**
+
+- Hand-calculated: every worked example in sections 3, 4 and 6.
+- Measured: produced by the verification script on tiny CPU values using only the Python standard library. One extra CPU check searched the `lm_eval` 0.4.13 package, downloaded from PyPI in the sandbox, for decontamination code.
+- Expected: how the notebook cells should behave. The sandbox has no GPU and cannot reach the Hub, so the cells were not run, and printed outputs are formats unless a number says it was measured.
+- Illustrative: the 100 n-grams per evaluation row, the 300 token mean row, the 5 percent leak rate, the accuracies 0.40 and 0.90, and the 20 percent logits budget.
+- From sources: the GPT-3, Tulu 3, Yang et al. and Min-K% Prob facts in section 11.

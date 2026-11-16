@@ -1,43 +1,10 @@
 # **Dataset Catalog and Licenses**
 
-**Scope.** Stage 03 Data Engineering, note 03 of 09. Notes 01 and 02 showed how a row becomes tokens and a loss mask. This note asks the question that comes before training: may you use this row at all? It covers the public dataset catalog, how to read a dataset card, what the common licenses allow, and how to audit a mixture row by row. Deduplication is covered in note 04, decontamination in note 05, synthetic data in note 06, and PII and the EU AI Act in note 07. This is not legal advice.
+*Stage 03 Data Engineering, note 03. Follows note 02, which showed how a row becomes tokens.*
 
-**Idea.** A dataset has a headline license on its page, but the license that matters belongs to each row's source. A mixture can carry one friendly headline over many different terms, and a missing license is not a free license. The audit takes minutes on a CPU, and a mistake found after training can force you to throw the model away.
+## **1. The Running Example: Where Each Row Came From**
 
-**Where the numbers come from.**
-
-- Hand-calculated: every worked example in sections 5, 6 and 9.
-- Measured: row counts and source counts read from the Hugging Face datasets server, license tags read from the Hub metadata, and every calculation reproduced by the verification script on CPU in the sandbox.
-- Expected: how the notebook cells should behave. The cells were not run, since the sandbox has no GPU or Hub login, and printed outputs are formats unless a number says it was measured.
-- Illustrative: the length buckets in section 9.4, the 150 token mean row, and the 5,000 tokens per second in section 9.5. Replace them with your own measurements.
-- From sources: license names and terms. All Hub metadata was read in November 2026 and can change.
-
-**Contents.**
-
-1. The Running Example: Where Each Row Came From
-2. Vocabulary Mapped to the Story
-3. Three Core Ideas
-4. The Definition in Plain Words, Then Formal
-5. Why the Previous Notes Are Not Enough
-6. The Extra Classic Example: The Tulu 3 Mixture
-7. The Catalog and How to Read It
-8. The License Audit Procedure
-9. Math Notation, Explained Step by Step
-10. Experiment Guide for Jupyter on GPU
-11. Limits and When It Fails
-12. Common Pitfalls
-13. Connection to Language Models and Modern AI
-14. Connection to the Next Topic
-15. Glossary
-16. Self-Test With Answers
-17. Key Points
-18. Sources and Verification
-
----
-
-## 1. The Running Example: Where Each Row Came From
-
-Back to the six rows. So far each had a defect in its content. Now each also has a source and a license. These sources are invented for teaching.
+Back to the six rows. So far each had a defect in its content. Now each also has a **source** (where a group of rows came from) and a **license** (the written terms for using a source). These sources are invented for teaching.
 
 | id | source | license | may train on it |
 |---|---|---|---|
@@ -48,7 +15,7 @@ Back to the six rows. So far each had a defect in its content. Now each also has
 | r5 | benchmark C | MIT | no, it is an evaluation set |
 | r6 | logs D | MIT | yes, PII is handled in note 07 |
 
-All six rows pass the shape and template checks of notes 01 and 02. One of them, r5, still must not be trained on. A license check catches what a shape check cannot.
+All six rows pass the shape and template checks of notes 01 and 02. One of them, r5, comes from an **evaluation-only set** (data kept for testing, never for training) and still must not be trained on. A license check catches what a shape check cannot.
 
 ```mermaid
 flowchart LR
@@ -61,53 +28,152 @@ flowchart LR
 
 **The new ingredient.** Notes 01 and 02 treated every row as usable. Here each row carries a license, and the dataset carries a **provenance table** with one line per source.
 
----
-
-## 2. Vocabulary Mapped to the Story
-
-| in the story | name | meaning |
-|---|---|---|
-| set A, set B, logs D | **source** | where a group of rows came from |
-| the license on set A | **license** | the written terms for using a source |
-| asking for credit | **attribution** | a duty to name the creator, the BY in a license name |
-| set A must stay open | **share-alike** | the SA in a license name, derived material carries the same terms |
-| a license that blocks selling | **non-commercial** | the NC in a license name, no commercial use |
-| Apache 2.0 or MIT | **permissive license** | few conditions beyond keeping notices |
-| the line for each source | **provenance** | recorded source, license and date |
-| benchmark C | **evaluation-only set** | data kept for testing, never for training |
-| a license shown on the page | **headline license** | the one label for a whole dataset |
-| a combined dataset | **mixture** | a dataset built from several sources |
-| one source inside a mixture | **subset** | a part of a mixture with its own terms |
-| a model wrote the answers | **model-generated data** | data whose terms may include the generator's terms |
-| a download that needs a click | **gated** | access requires accepting terms first |
+| **What you will learn** |
+|---|
+| How to read a dataset card and check the license of every source, not just the headline. |
+| Why a mixed dataset can hide unknown or non-commercial rows, with real counts from the Tulu 3 mixture. |
+| How to pick a cut length and the smallest GPU tier, and price one training run. |
 
 ---
 
-## 3. Three Core Ideas
+## **2. What You May Use: The Catalog and How to Read It**
 
-**Idea 1. The license belongs to the source, not the file.** A mixture has a headline license, but each subset keeps its own. In the story, a file holding r1 to r6 would carry three different licenses.
-
-**Idea 2. The most restrictive source sets what you may do.** One non-commercial row makes the whole mixture non-commercial. One share-alike source adds a duty to the whole result.
-
-**Idea 3. A card is a claim, not a guarantee.** Check the metadata, then the subset list, then the real counts. Cards can be incomplete or out of date, as section 6 shows with measured numbers.
-
----
-
-## 4. The Definition in Plain Words, Then Formal
+### **2.1 The Definition in Plain Words, Then Formal**
 
 **Plain words.** A **license audit** reads the license of every source in your data, decides which rows you may train on, and writes down the result.
 
-**Formal.** A dataset has $N$ rows split into sources $k = 1..K$ with $n_k$ rows each. Each source has a license label $g_k$, taken from a set of groups such as permissive, non-commercial, or unknown. Let $\text{OK}$ be the set of groups that allow your use. The usable share is
+**Formal.** A dataset has $N$ rows split into sources $k = 1..K$ with $n_k$ rows each. Each source has a license label $g_k$, taken from a set of groups such as permissive, **non-commercial** (the NC in a license name, no commercial use), or unknown. Let $\text{OK}$ be the set of groups that allow your use. The usable share is
 
 $$u = \frac{\sum_{k:\, g_k \in \text{OK}} n_k}{N}$$
 
-and your dataset is **clean for the use** when every row you train on has $g_k \in \text{OK}$ and is recorded in the provenance table.
+and your dataset is **clean for the use** when every row you train on has $g_k \in \text{OK}$ and is recorded in the **provenance** (recorded source, license and date) table.
 
 **Check.** The word "unknown" is its own group and is not in $\text{OK}$. A source with no license is not allowed until someone clarifies it.
 
+### **2.2 Reading a dataset card**
+
+**Intuition.** The page has a label, but the label is one field in a record.
+
+**Precise statement.** The Hub stores, per dataset, a list of tags (for example `license:mit` and a size range), a `gated` flag, a revision hash called `sha`, and the card text. A license tag may be missing, and the card text may carry more detail than the tag.
+
+```text
+for each dataset:
+    read tags: license, size range
+    read gated flag
+    read card text: subsets, generator model, intended use
+    record the sha of the revision you used
+```
+
+**Worked example.** The Alpaca record has the tag `license:cc-by-nc-4.0`, and its card says the 52,000 instructions came from OpenAI's text-davinci-003 engine. Two facts matter: a non-commercial license, and a generator with its own terms, because the rows are **model-generated data** (data whose terms may include the generator's terms).
+
+**Beginner trap.** Using the first license you see. Read the card text for **subsets** (a part of a mixture with its own terms) and for the generator.
+
+**When to use.** Before you download anything large.
+
+### **2.3 SFT data**
+
+Row counts are measured on the datasets server. License tags come from the Hub metadata.
+
+| dataset | rows | license tag | notes |
+|---|---|---|---|
+| Alpaca | 52,002 | CC BY-NC 4.0 | generated by text-davinci-003, non-commercial |
+| Dolly 15k | 15,011 | CC BY-SA 3.0 | written by Databricks employees, card says commercial use is allowed under the terms |
+| OpenHermes 2.5 | 1,001,551 | none declared | compilation tagged GPT-4 and distillation |
+| Tulu 3 SFT mixture | 939,343 | ODC-BY headline | subset licenses vary (section 4) |
+| UltraChat 200k | 515,311 over four splits | MIT | filtered from UltraChat, generated with ChatGPT APIs |
+| Capybara (TRL copy) | 15,806 train, 200 test | none declared | used for statistics in notes 01 and 02 |
+
+### **2.4 Preference data**
+
+| dataset | rows | license tag | notes |
+|---|---|---|---|
+| UltraFeedback | 63,967 | MIT | about 64K prompts, four responses each |
+| HH-RLHF | 169,352 | MIT | card says it is meant for preference models, not for supervised training of dialogue agents |
+| Argilla DPO mix 7k | 7,500 | MIT | small, filtered to highly rated chosen responses |
+| Tulu 3 8B preference mixture | 272,898 | ODC-BY headline | card says some portions are non-commercial |
+
+### **2.5 Tool use**
+
+| dataset | rows | license tag | notes |
+|---|---|---|---|
+| Glaive function calling v2 | 112,960 | Apache 2.0 | single and multi-turn |
+| xLAM function calling 60k | 60,000 (card) | CC BY 4.0 | gated, you accept terms to download, synthetic |
+
+ToolBench and ToolACE were not checked.
+
+### **2.6 Reasoning and evaluation sets**
+
+| dataset | license tag | use |
+|---|---|---|
+| GSM8K | MIT | train split for training, test split for evaluation |
+| MATH (EleutherAI copy) | MIT | same |
+| MBPP | CC BY 4.0 | code, check the split |
+| HumanEval | MIT | 164 problems, evaluation only |
+| MMLU, MMLU-Pro | MIT | evaluation only |
+| LiveCodeBench lite | a Creative Commons tag | evaluation, check the exact variant |
+
+The train and test split usage for GSM8K and MATH is general knowledge. AIME and ARC-AGI were not checked.
+
+### **2.7 Pretraining corpora**
+
+SmolLM-Corpus has the tag ODC-BY and a size range of 100 million to 1 billion rows. It is pretraining data and not SFT data. Know the difference before you mix them.
+
+### **2.8 What the common licenses mean**
+
+This table is general knowledge, not legal advice.
+
+| license | what it allows | what it asks |
+|---|---|---|
+| MIT, Apache 2.0 | commercial use | keep the notice, Apache also grants patent rights |
+| CC BY 4.0, ODC-BY | commercial use | give credit |
+| CC BY-SA 3.0 | commercial use | derived material carries the same terms |
+| CC BY-NC 4.0 | non-commercial use only | give credit |
+| none declared | nothing is granted | ask the owner, treat as unusable until then |
+
+Whether a trained model counts as derived material under **share-alike** (the SA in a license name, derived material carries the same terms) is unsettled, so ask a lawyer before shipping.
+
+### **2.9 The license gate**
+
+```text
+for each source k:
+    group = license tag of k (or "unknown")
+    if group is unknown or non-commercial and use is commercial: hold or drop
+    if source is an evaluation set: drop from training
+    if group is share-alike: record the duty in the provenance table
+    record source, license, sha, date
+usable share = kept rows / all rows
+```
+
+**Worked example.** Toy rows: r5 is an evaluation set, so it is dropped. The share-alike duty from r1 and r2 is recorded. Five rows remain.
+
+**Beginner trap.** Dropping only the NC rows and keeping the unknown ones.
+
+### **2.10 Comparison and assumptions**
+
+```mermaid
+flowchart TD
+    Q{"Will the model be shipped?"} -->|"yes"| S{"Every source has a stated permissive license?"}
+    Q -->|"no, research only"| R["Unknown and NC rows are allowed, record the limit"]
+    S -->|"yes"| C["Use the set, record provenance"]
+    S -->|"no"| F["Drop or clarify the unknown and NC subsets first"]
+```
+
+| choice | strength | assumption that can fail |
+|---|---|---|
+| use a clean small set (Dolly, UltraFeedback) | easy to defend | it is big enough for your task |
+| use a mixture and audit subsets | more data | every subset license is findable |
+| generate your own data (note 06) | you control terms | the generator's terms allow it |
+| use unknown-license data for research only | fast | you never ship the model |
+
 ---
 
-## 5. Why the Previous Notes Are Not Enough
+## **3. Why It Matters, With Numbers**
+
+Three ideas to keep in mind:
+
+- The license belongs to the source, not the file.
+- The most restrictive source sets what you may do.
+- A card is a claim, not a guarantee.
 
 On the toy rows, notes 01 and 02 give a clean render of all six rows. Add the license column and the result changes.
 
@@ -118,13 +184,13 @@ On the toy rows, notes 01 and 02 give a clean render of all six rows. Add the li
 
 Hand check: $5 / 6 = 0.8333$.
 
-The same gap shows up on real data. The Tulu 3 SFT mixture loads and renders without error. Its headline license is ODC-BY. Yet section 6 shows that only 48.5 percent of its rows are under ODC-BY, 14.9 percent have no license on the card, and 1.0 percent are non-commercial. No shape check reveals that.
+The same gap shows up on real data. The Tulu 3 SFT **mixture** (a dataset built from several sources) loads and renders without error. Its **headline license** (the one label for a whole dataset) is ODC-BY. Yet section 4 shows that only 48.5 percent of its rows are under ODC-BY, 14.9 percent have no license on the card, and 1.0 percent are non-commercial. No shape check reveals that.
 
 **Beginner trap.** Treating "the dataset loads" as "the dataset is usable".
 
 ---
 
-## 6. The Extra Classic Example: The Tulu 3 Mixture
+## **4. The Extra Classic Example: The Tulu 3 Mixture**
 
 The running example has one license per row. A real mixture hides how many licenses can sit under one headline. The Tulu 3 SFT mixture card says the collection is ODC-BY, "different licenses apply to subsets", and "some portions are non-commercial".
 
@@ -183,126 +249,7 @@ The row total is $455902 + 328719 + 5000 + 240 + 9500 + 89982 + 50000 = 939343$.
 
 ---
 
-## 7. The Catalog and How to Read It
-
-### 7.1 Reading a dataset card
-
-**Intuition.** The page has a label, but the label is one field in a record.
-
-**Precise statement.** The Hub stores, per dataset, a list of tags (for example `license:mit` and a size range), a `gated` flag, a revision hash called `sha`, and the card text. A license tag may be missing, and the card text may carry more detail than the tag.
-
-```text
-for each dataset:
-    read tags: license, size range
-    read gated flag
-    read card text: subsets, generator model, intended use
-    record the sha of the revision you used
-```
-
-**Worked example.** The Alpaca record has the tag `license:cc-by-nc-4.0`, and its card says the 52,000 instructions came from OpenAI's text-davinci-003 engine. Two facts matter: a non-commercial license, and a generator with its own terms.
-
-**Beginner trap.** Using the first license you see. Read the card text for subsets and for the generator.
-
-**When to use.** Before you download anything large.
-
-### 7.2 SFT data
-
-Row counts are measured on the datasets server. License tags come from the Hub metadata.
-
-| dataset | rows | license tag | notes |
-|---|---|---|---|
-| Alpaca | 52,002 | CC BY-NC 4.0 | generated by text-davinci-003, non-commercial |
-| Dolly 15k | 15,011 | CC BY-SA 3.0 | written by Databricks employees, card says commercial use is allowed under the terms |
-| OpenHermes 2.5 | 1,001,551 | none declared | compilation tagged GPT-4 and distillation |
-| Tulu 3 SFT mixture | 939,343 | ODC-BY headline | subset licenses vary (section 6) |
-| UltraChat 200k | 515,311 over four splits | MIT | filtered from UltraChat, generated with ChatGPT APIs |
-| Capybara (TRL copy) | 15,806 train, 200 test | none declared | used for statistics in notes 01 and 02 |
-
-### 7.3 Preference data
-
-| dataset | rows | license tag | notes |
-|---|---|---|---|
-| UltraFeedback | 63,967 | MIT | about 64K prompts, four responses each |
-| HH-RLHF | 169,352 | MIT | card says it is meant for preference models, not for supervised training of dialogue agents |
-| Argilla DPO mix 7k | 7,500 | MIT | small, filtered to highly rated chosen responses |
-| Tulu 3 8B preference mixture | 272,898 | ODC-BY headline | card says some portions are non-commercial |
-
-### 7.4 Tool use
-
-| dataset | rows | license tag | notes |
-|---|---|---|---|
-| Glaive function calling v2 | 112,960 | Apache 2.0 | single and multi-turn |
-| xLAM function calling 60k | 60,000 (card) | CC BY 4.0 | gated, you accept terms to download, synthetic |
-
-ToolBench and ToolACE were not checked.
-
-### 7.5 Reasoning and evaluation sets
-
-| dataset | license tag | use |
-|---|---|---|
-| GSM8K | MIT | train split for training, test split for evaluation |
-| MATH (EleutherAI copy) | MIT | same |
-| MBPP | CC BY 4.0 | code, check the split |
-| HumanEval | MIT | 164 problems, evaluation only |
-| MMLU, MMLU-Pro | MIT | evaluation only |
-| LiveCodeBench lite | a Creative Commons tag | evaluation, check the exact variant |
-
-The train and test split usage for GSM8K and MATH is general knowledge. AIME and ARC-AGI were not checked.
-
-### 7.6 Pretraining corpora
-
-SmolLM-Corpus has the tag ODC-BY and a size range of 100 million to 1 billion rows. It is pretraining data and not SFT data. Know the difference before you mix them.
-
-### 7.7 What the common licenses mean
-
-This table is general knowledge, not legal advice.
-
-| license | what it allows | what it asks |
-|---|---|---|
-| MIT, Apache 2.0 | commercial use | keep the notice, Apache also grants patent rights |
-| CC BY 4.0, ODC-BY | commercial use | give credit |
-| CC BY-SA 3.0 | commercial use | derived material carries the same terms |
-| CC BY-NC 4.0 | non-commercial use only | give credit |
-| none declared | nothing is granted | ask the owner, treat as unusable until then |
-
-Whether a trained model counts as derived material under share-alike is unsettled, so ask a lawyer before shipping.
-
-### 7.8 The license gate
-
-```text
-for each source k:
-    group = license tag of k (or "unknown")
-    if group is unknown or non-commercial and use is commercial: hold or drop
-    if source is an evaluation set: drop from training
-    if group is share-alike: record the duty in the provenance table
-    record source, license, sha, date
-usable share = kept rows / all rows
-```
-
-**Worked example.** Toy rows: r5 is an evaluation set, so it is dropped. The share-alike duty from r1 and r2 is recorded. Five rows remain.
-
-**Beginner trap.** Dropping only the NC rows and keeping the unknown ones.
-
-### 7.9 Comparison and assumptions
-
-```mermaid
-flowchart TD
-    Q{"Will the model be shipped?"} -->|"yes"| S{"Every source has a stated permissive license?"}
-    Q -->|"no, research only"| R["Unknown and NC rows are allowed, record the limit"]
-    S -->|"yes"| C["Use the set, record provenance"]
-    S -->|"no"| F["Drop or clarify the unknown and NC subsets first"]
-```
-
-| choice | strength | assumption that can fail |
-|---|---|---|
-| use a clean small set (Dolly, UltraFeedback) | easy to defend | it is big enough for your task |
-| use a mixture and audit subsets | more data | every subset license is findable |
-| generate your own data (note 06) | you control terms | the generator's terms allow it |
-| use unknown-license data for research only | fast | you never ship the model |
-
----
-
-## 8. The License Audit Procedure
+## **5. The License Audit Procedure**
 
 ```mermaid
 flowchart LR
@@ -313,10 +260,10 @@ flowchart LR
     T --> V["Pin the revision sha"]
 ```
 
-1. Read the tags: license, size range, gated flag.
+1. Read the tags: license, size range, **gated** (access requires accepting terms first) flag.
 2. Read the card for subset lists and generator names.
 3. Count rows by source from the data, not from the card.
-4. Apply the gate in section 7.8.
+4. Apply the gate in section 2.9.
 5. Write one provenance line per source into `domain_dataset/03-provenance-table.md`: source, license, rows, sha, date read, decision.
 6. Pin the revision sha so the data you trained on can be found again.
 
@@ -324,11 +271,11 @@ flowchart LR
 
 ---
 
-## 9. Math Notation, Explained Step by Step
+## **6. The Math, Step by Step**
 
 This section lists the new symbols and every formula with a worked example. Cover the steps, do the calculation yourself, then compare with the boxed value. The tiny softmax and gradient example is derived in note 01 section 9.4, and this note adds no new model, so it does not repeat it.
 
-### 9.1 Notation table
+### **6.1 Notation table**
 
 | symbol | read aloud | meaning | in the running example |
 |---|---|---|---|
@@ -345,7 +292,7 @@ This section lists the new symbols and every formula with a worked example. Cove
 
 **Reading tips.** The letter $g$ is a license group here and nothing else. The symbol $\rho$ keeps its meaning from note 01, a row share, now computed per group.
 
-### 9.2 Group share and usable share
+### **6.2 Group share and usable share**
 
 $$\rho_g = \frac{n_g}{N} \qquad u = \sum_{g \in \text{OK}} \rho_g$$
 
@@ -377,7 +324,7 @@ Dropping only the non-commercial rows keeps $(939343 - 9500)/939343 = \boxed{0.9
 
 **Check.** The script matches (measured).
 
-### 9.3 Combined terms: the most restrictive rule
+### **6.3 Combined terms: the most restrictive rule**
 
 $$\text{commercial}(D) = \bigwedge_{k} \text{commercial}(g_k) \qquad \text{share-alike}(D) = \bigvee_{k} \text{share-alike}(g_k)$$
 
@@ -401,7 +348,7 @@ Now add one row r7 with CC BY-NC 4.0. Its commercial value is false, so the comb
 
 **Beginner trap.** Averaging licenses. There is no "mostly commercial".
 
-### 9.4 Truncation and the smallest tier
+### **6.4 Truncation and the smallest tier**
 
 $$\text{truncated share} = \frac{\#\{\text{rows with } T_i > L_{\text{cut}}\}}{N} \qquad \text{tier}(L_{\text{cut}}) = \min\{\text{VRAM} : T_{\max}(\text{VRAM}) \ge L_{\text{cut}}\}$$
 
@@ -440,7 +387,7 @@ Read one row: at $L_{\text{cut}} = 8192$ the 24 GB tier gives $T_{\max} = 7898 <
 
 **Beginner trap.** Choosing the GPU first and the cut second. The long tail of your data decides the tier, or the cut.
 
-### 9.5 Tokens, hours and cost of one run
+### **6.5 Tokens, hours and cost of one run**
 
 $$D = N \,\bar T\, E \qquad \text{hours} = \frac{D}{3600\,R} \qquad \text{cost} = \text{hours} \times \text{price}$$
 
@@ -462,7 +409,7 @@ That is $0.767 / 30 = \boxed{0.0256}$, about 2.6 percent of one month's $30 Moda
 
 **Beginner trap.** Using a speed measured on one GPU with the price of another. Take $R$ from note 02 cell 8 on the tier you price.
 
-### 9.6 All formulas and answers
+### **6.6 All formulas and answers**
 
 | formula | input | answer |
 |---|---|---|
@@ -477,7 +424,7 @@ That is $0.767 / 30 = \boxed{0.0256}$, about 2.6 percent of one month's $30 Moda
 | hours | $D / (3600 \times 5000)$ | 1.3000 |
 | cost on a T4 | $1.3 \times 0.59$ | 0.7670 |
 
-### 9.7 Pen-and-paper rules
+### **6.7 Pen-and-paper rules**
 
 1. Count rows by source from the data, never from the card.
 2. Unknown is its own group and is not allowed.
@@ -492,7 +439,7 @@ That is $0.767 / 30 = \boxed{0.0256}$, about 2.6 percent of one month's $30 Moda
 
 ---
 
-## 10. Experiment Guide for Jupyter on GPU
+## **7. Notebook Experiments on GPU**
 
 These cells run in a GPU notebook: a Lightning AI Studio, a Modal Notebook, or your organization's cluster. They were checked for syntax and not run. Cells 2 and 3 need internet access, and cell 2 may need a Hub login for gated data. Run cell 1 first. Cell 6 uses variables from cells 1 and 5.
 
@@ -551,14 +498,14 @@ for name in names:
     info = api.dataset_info(name)
     licenses = [t.split(":", 1)[1] for t in info.tags if t.startswith("license:")]
     sizes = [t.split(":", 1)[1] for t in info.tags if t.startswith("size_categories:")]
-    print(f"{name:38s} {licenses or 'none declared'} gated={info.gated} {sizes}")
+    print(f"{name:38s} {licenses or 'none declared'} gated: {info.gated} {sizes}")
 ```
 
 ```text
-tatsu-lab/alpaca                       ['cc-by-nc-4.0'] gated=False ['10K<n<100K']
-databricks/databricks-dolly-15k        ['cc-by-sa-3.0'] gated=False ['10K<n<100K']
-teknium/OpenHermes-2.5                 none declared gated=False ['1M<n<10M']
-allenai/tulu-3-sft-mixture             ['odc-by'] gated=False ['100K<n<1M']
+tatsu-lab/alpaca                       ['cc-by-nc-4.0'] gated: False ['10K<n<100K']
+databricks/databricks-dolly-15k        ['cc-by-sa-3.0'] gated: False ['10K<n<100K']
+teknium/OpenHermes-2.5                 none declared gated: False ['1M<n<10M']
+allenai/tulu-3-sft-mixture             ['odc-by'] gated: False ['100K<n<1M']
 ...
 ```
 
@@ -567,7 +514,7 @@ The first four lines are what the Hub metadata showed when this note was written
 ```python
 # ── Cell 3. Sanity check: Tulu 3 source counts ───────────────────
 #    Read the source column counts from the datasets server
-#    Reproduce the 939,343 total and the group shares of section 9.2
+#    Reproduce the 939,343 total and the group shares of section 6.2
 # ─────────────────────────────────────────────────────────────────
 import json
 import urllib.request
@@ -596,12 +543,12 @@ non-commercial 0.0101  unlisted 0.1490
 stated permissive 0.8409
 ```
 
-These three numbers were measured when this note was written and match section 9.2. If the dataset is updated, the counts can change.
+These three numbers were measured when this note was written and match section 6.2. If the dataset is updated, the counts can change.
 
 ```python
 # ── Cell 4. Provenance table and combined terms ──────────────────
 #    One line per row: source, license, may it be trained on
-#    Apply the most restrictive rule of section 9.3
+#    Apply the most restrictive rule of section 6.3
 # ─────────────────────────────────────────────────────────────────
 rows = [
     ("r1", "set A", "CC-BY-SA-3.0", True),
@@ -690,7 +637,7 @@ share of the $30 monthly credit <z>%
 
 For the 80 GB tier the price table uses the A100 80GB rate. The H100 costs more, at $3.95 per hour.
 
-### 10.1 Results table template
+### **7.1 Results table template**
 
 | GPU tier | longest row from logits | truncated share at 4,096 | truncated share at 8,192 | rate in tokens per second | cost of one run |
 |---|---|---|---|---|---|
@@ -704,14 +651,14 @@ For the 80 GB tier the price table uses the A100 80GB rate. The H100 costs more,
 
 The truncated shares do not depend on the GPU, so those two columns should match across rows. Only the longest row, the speed and the cost change.
 
-### 10.2 Expected behavior (expected, not yet verified)
+### **7.2 Expected behavior (expected, not yet verified)**
 
 - Cell 2 shows no license for OpenHermes 2.5 and Capybara, and a license for the others.
-- Cell 3 gives 19 sources and the same three shares as section 9.2, unless the dataset was updated.
+- Cell 3 gives 19 sources and the same three shares as section 6.2, unless the dataset was updated.
 - Cell 5 shows a truncated share that falls as the cut rises, and a fit flag that turns True from some cut upward.
 - Cell 6 shows a cost that scales with price per hour and falls as the rate rises.
 
-### 10.3 If a cell fails
+### **7.3 If a cell fails**
 
 1. Cell 2 or 3 fails with an access error: the network or login is the cause, so check the Studio network settings.
 2. A gated dataset refuses: accept its terms on the Hub page and log in.
@@ -722,31 +669,26 @@ GPU and network runs are not exactly reproducible. Compare trends, not exact dec
 
 ---
 
-## 11. Limits and When It Fails
+## **8. Pitfalls and Limits**
 
-**What the audit needs.** The Hub metadata, the card text, and a person who reads both.
+**Pitfalls that really bite.**
 
-**Where it fails.**
+1. **Reading the headline only.** The Tulu 3 headline covers 48.5 percent of its rows.
+2. **No license means free.** It means nothing is granted.
+3. **Dropping NC but keeping unknown.** In section 6.2 that is 15 points of rows.
+4. **Training on an evaluation set.** HumanEval, MMLU and the test splits are for measuring, covered in note 05.
+5. **Trusting a card's list.** Count the real rows by source. The 50,000 row subset in section 4 shows why.
+6. **Forgetting the generator.** Alpaca came from text-davinci-003, UltraChat from ChatGPT APIs.
+7. **Skipping gated terms.** The terms you accept are part of the license.
+8. **Not pinning the revision.** Data can change after you read the card, so record the sha.
+
+**Limits that remain.**
 
 - A license tag can be missing, wrong, or older than the data. A tag is a claim by the uploader.
-- A mixture can contain rows whose own license the card never states, as the 50,000 row subset in section 6 shows.
 - Model-generated data may carry the generator's terms on top of the dataset license. The tag does not show this.
 - A license tells you what you may do with copyright. It does not tell you whether the rows contain personal data, which is covered in note 07.
 - Share-alike for a trained model is unsettled, and I cannot settle it.
 - The numbers in this note are one day's snapshot. Datasets and licenses change.
-
----
-
-## 12. Common Pitfalls
-
-1. **Reading the headline only.** The Tulu 3 headline covers 48.5 percent of its rows.
-2. **No license means free.** It means nothing is granted.
-3. **Dropping NC but keeping unknown.** In section 9.2 that is 15 points of rows.
-4. **Training on an evaluation set.** HumanEval, MMLU and the test splits are for measuring, covered in note 05.
-5. **Trusting a card's list.** Count the real rows by source.
-6. **Forgetting the generator.** Alpaca came from text-davinci-003, UltraChat from ChatGPT APIs.
-7. **Skipping gated terms.** The terms you accept are part of the license.
-8. **Not pinning the revision.** Data can change after you read the card, so record the sha.
 
 **Debugging checklist.**
 
@@ -758,120 +700,47 @@ GPU and network runs are not exactly reproducible. Compare trends, not exact dec
 
 ---
 
-## 13. Connection to Language Models and Modern AI
+## **9. How This Shows Up in Language Models**
 
-| dataset type | in a chat model or agent |
-|---|---|
-| SFT mixture such as Tulu 3 | the instruction-following data behind an open chat model (the card says the Tulu 3 models were trained on it) |
-| preference data such as UltraFeedback | which of two replies a model learns to prefer |
-| function calling data such as xLAM | how an agent learns to emit tool calls |
-| evaluation sets such as HumanEval | the test a model is scored on, never its lessons |
-| pretraining corpora such as SmolLM-Corpus | the base knowledge before any of the above |
+- An SFT mixture such as Tulu 3 is the instruction data behind an open chat model, and the model inherits the mixture's mix of terms.
+- Preference data such as UltraFeedback tells a model which of two replies people prefer.
+- Function calling data such as xLAM teaches an agent to emit tool calls.
+- Evaluation sets such as HumanEval are the test a model is scored on, never its lessons.
+- Pretraining corpora such as SmolLM-Corpus give the base knowledge before any of the above.
 
-**Point 1. Mixtures are research artifacts.** The Tulu 3 card calls its mixture a research artifact and says different licenses apply to subsets. A model trained on it inherits that mix of terms.
+The Tulu 3 card calls its mixture a research artifact and says different licenses apply to subsets. Many catalog sets contain model outputs: Alpaca came from text-davinci-003, UltraChat from ChatGPT APIs, and OpenHermes 2.5 is tagged GPT-4 distillation, so the generator's terms sit on top of the dataset license. The source stage file and the Hub disagree in several places (see the corrections list), so recheck each dataset before every project. Added by me, not in the source note: the group share formula, the most restrictive rule, the truncation to tier table and the cost formula.
 
-**Point 2. Many catalog sets contain model outputs.** Alpaca came from text-davinci-003, UltraChat from ChatGPT APIs, and OpenHermes 2.5 is tagged GPT-4 distillation. The terms of those generators are separate from the dataset license.
-
-**Point 3. The source stage file and the Hub disagree in several places.** The corrections list in section 18 shows which, so recheck each dataset before every project.
-
-**Added (not in the source note).** The group share formula, the most restrictive rule, the truncation to tier table, and the cost formula.
+**Next.** Note 04 removes repeated rows with hashes, MinHash and embeddings.
 
 ---
 
-## 14. Connection to the Next Topic
-
-Next is note 04: quality and deduplication. It takes the rows that passed this license gate and removes exact and near-duplicates with hashing and MinHash.
-
-| order | topic | what it adds | status |
-|---|---|---|---|
-| 01 | Why data and data shapes | shapes, shares, cheap checks | done |
-| 02 | Formats and chat templates | conversion, templates, masks | done |
-| 03 | Dataset catalog and licenses | sources, licenses, provenance | this note |
-| 04 | Quality and deduplication | exact and near-duplicate removal | next |
-| 05 | Decontamination | removing eval leaks | planned |
-| 06 | Synthetic data | rubric generation, model collapse | planned |
-| 07 | PII and the EU AI Act | scrubbing and documentation | planned |
-| 08 | Domain dataset and splits | build, split, version | planned |
-| 09 | Pre-flight and acceptance gate | the exit checklist | planned |
-
-The roadmap order was not pasted, so this order is assumed.
-
----
-
-## 15. Glossary
-
-| term | meaning with the running example |
-|---|---|
-| **source** | set A, set B, logs D, or benchmark C |
-| **license** | the terms of set A, CC BY-SA 3.0 |
-| **attribution** | the duty to credit set A's authors |
-| **share-alike** | the duty to keep set A's terms on derived data |
-| **non-commercial** | a license that would block a r7 from a CC BY-NC source |
-| **permissive license** | Apache 2.0 for set B, MIT for logs D |
-| **provenance** | the table that lists each source, license, date and revision |
-| **evaluation-only set** | benchmark C, so r5 leaves training |
-| **headline license** | the one label on a mixture such as ODC-BY on Tulu 3 |
-| **mixture** | a dataset built from several sources, like the six toy rows |
-| **subset** | one source inside a mixture, like Persona MATH inside Tulu 3 |
-| **model-generated data** | rows whose answers a model wrote, like Alpaca |
-| **gated** | a dataset that asks you to accept terms before download |
-| **usable share** | 5 of 6 on the toy rows |
-
----
-
-## 16. Self-Test With Answers
+## **10. Self-Test**
 
 **Q1.** A dataset has 1,000 rows: 700 under MIT, 200 under CC BY-NC 4.0, and 100 with no license. Find the usable share for commercial use.
 
-**Q2.** A set of 1,000 rows has 500 rows up to 1,024 tokens, 300 up to 2,048, 150 up to 4,096, 40 up to 8,192 and 10 up to 16,384. Find the truncated share at a cut of 4,096.
+**Q2.** A run has 20,000 rows, a mean of 200 tokens, 2 epochs and a speed of 4,000 tokens per second, on an L4 at $0.80 per hour. Find the hours and the cost.
 
-**Q3.** Find the smallest tier that fits a cut of 12,000, using the $T_{\max}$ values of section 9.4.
+**Q3.** Spot the mistake: "The Tulu 3 mixture is ODC-BY, so I can use every row commercially."
 
-**Q4.** A run has 20,000 rows, a mean of 200 tokens, 2 epochs and a speed of 4,000 tokens per second, on an L4 at $0.80 per hour. Find the hours and the cost.
+**Q4.** Spot the mistake: "The dataset has no license tag, so nothing forbids commercial use."
 
-**Q5.** Spot the mistake: "The Tulu 3 mixture is ODC-BY, so I can use every row commercially."
-
-**Q6.** Spot the mistake: "The dataset has no license tag, so nothing forbids commercial use."
-
-**Q7.** The Tulu card lists subsets summing to 889,344 rows, but the dataset has 939,343. Where is the difference?
-
-**Q8.** Why is HumanEval never part of a training set?
+**Q5.** The Tulu card lists subsets summing to 889,344 rows, but the dataset has 939,343. Where is the difference?
 
 **Answers.**
 
 **A1.** Only the MIT rows are stated permissive: $700 / 1000 =$ $\boxed{0.7}$. The NC and unlicensed rows are excluded.
 
-**A2.** Rows above 4,096 are $40 + 10 = 50$, so the share is $50 / 1000 =$ $\boxed{0.05}$.
+**A2.** $D = 20000 \times 200 \times 2 = 8{,}000{,}000$. Hours $= 8000000 / (3600 \times 4000) =$ $\boxed{0.5556}$. Cost $= 0.5556 \times 0.80 =$ $\boxed{0.4444}$ dollars.
 
-**A3.** $T_{\max}$ is 7,898 for 24 GB, which is below 12,000, and 15,796 for 48 GB, which is above. The answer is $\boxed{48\ \text{GB}}$.
+**A3.** The headline covers only the ODC-BY subsets, 48.5 percent of the rows. One subset is non-commercial (1.0 percent), and 14.9 percent have no license on the card.
 
-**A4.** $D = 20000 \times 200 \times 2 = 8{,}000{,}000$. Hours $= 8000000 / (3600 \times 4000) =$ $\boxed{0.5556}$. Cost $= 0.5556 \times 0.80 =$ $\boxed{0.4444}$ dollars.
+**A4.** No license means no permission was granted. Treat the rows as unusable until the owner clarifies.
 
-**A5.** The headline covers only the ODC-BY subsets, 48.5 percent of the rows. One subset is non-commercial (1.0 percent), and 14.9 percent have no license on the card.
-
-**A6.** No license means no permission was granted. Treat the rows as unusable until the owner clarifies.
-
-**A7.** A 50,000 row subset, OpenMath 2 GSM8K, is in the data but missing from the card's list, so its license is not stated there. The card also gives 7,132 for OASST1 where the data has 7,131.
-
-**A8.** It is an evaluation set with 164 problems. Training on it makes your scores measure memory and not skill, covered in note 05.
+**A5.** A 50,000 row subset, OpenMath 2 GSM8K, is in the data but missing from the card's list, so its license is not stated there. The card also gives 7,132 for OASST1 where the data has 7,131.
 
 ---
 
-## 17. Key Points
-
-1. A dataset's license belongs to each source, and a mixture's headline hides the rest.
-2. Unknown is its own group, and it is not allowed.
-3. The most restrictive source sets what you may do with the whole set.
-4. Count rows by source from the data, and compare with the card.
-5. Evaluation-only sets never enter training.
-6. Model-generated data may carry the generator's terms.
-7. The usable share is $u = \sum_{g \in \text{OK}} \rho_g$, and on Tulu 3 it is 0.8409.
-8. Choose the cut length first, then the smallest GPU tier that fits it.
-9. Record source, license, date and revision sha in a provenance table.
-
----
-
-## 18. Sources and Verification
+## **11. Sources and Verification**
 
 **Sources used.**
 
@@ -882,11 +751,12 @@ The roadmap order was not pasted, so this order is assumed.
 - Hugging Face Hub Python docs for `HfApi.dataset_info`, read through Context7
 - Modal pricing, https://modal.com/pricing (hourly prices for the cost formula)
 
-**Checked by running code.** The verification script reproduced, with asserts, every hand-calculated number in sections 5, 6, 9 and 16: the 19 source counts and the 939,343 total, the license group sums and shares, the 889,344 card sum and the 50,000 gap, the usable share, the most restrictive rule, the truncation table and the smallest tier, and the cost calculation. All six cells in section 10 were checked with `ast.parse`.
+
+**Verification note.** A script reproduced every hand-calculated number with asserts, and all six notebook cells passed `ast.parse`. The Hub tags and row counts were read in November 2026 and can change. The GPU and Hub cells were not run, so their outputs are formats.
 
 **Checked on the web.** Every license tag, size range and gated flag in the catalog tables, all row counts except xLAM (the server refused the size request, so 60,000 comes from its card), and the Tulu 3 card's subset list and its non-commercial note.
 
-**From general knowledge, not verified here.** The meaning of each license in section 7.7, the unsettled question of share-alike for trained models, the use of the GSM8K and MATH train splits for training, and the Alpaca duty to follow the generator's terms. I am not a lawyer.
+**From general knowledge, not verified here.** The meaning of each license in section 2.8, the unsettled question of share-alike for trained models, the use of the GSM8K and MATH train splits for training, and the Alpaca duty to follow the generator's terms. I am not a lawyer.
 
 **Not checked.** ToolBench, ToolACE, AIME, ARC-AGI, the multimodal sets, Wikipedia, Common Crawl and The Stack.
 
@@ -902,3 +772,22 @@ The roadmap order was not pasted, so this order is assumed.
 - Tulu 3 preference mixture: the source says about 300K. The 8B mixture has 272,898 rows.
 - HH-RLHF: the source lists it as preference data, which fits. Its card adds that it is not meant for supervised training of dialogue agents.
 - Rounded row counts in the source (52K, 1M, 113K, 64K, 170K) match the measured counts of 52,002, 1,001,551, 112,960, 63,967 and 169,352.
+
+---
+
+## **Appendix A. Glossary**
+
+Terms not defined where they first appear:
+
+| term | meaning with the running example |
+|---|---|
+| **attribution** | the duty to credit set A's authors |
+| **permissive license** | Apache 2.0 for set B, MIT for logs D |
+
+## **Appendix B. Where the Numbers Come From**
+
+- Hand-calculated: every worked example in sections 3, 4 and 6.
+- Measured: row counts and source counts read from the Hugging Face datasets server, license tags read from the Hub metadata, and every calculation reproduced by the verification script on CPU in the sandbox.
+- Expected: how the notebook cells should behave. The cells were not run, since the sandbox has no GPU or Hub login, and printed outputs are formats unless a number says it was measured.
+- Illustrative: the length buckets in section 6.4, the 150 token mean row, and the 5,000 tokens per second in section 6.5. Replace them with your own measurements.
+- From sources: license names and terms. All Hub metadata was read in November 2026 and can change.

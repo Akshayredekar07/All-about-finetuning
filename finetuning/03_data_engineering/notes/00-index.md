@@ -2,31 +2,17 @@
 
 **Outcome of the stage.** A dataset you can defend: sourced, licensed, deduplicated, decontaminated, format-checked, versioned and documented. **Exit criterion.** A public dataset on the Hub with a data card, a license table, a decontamination report, and a held-out split that no training run ever touched.
 
-This file is the map for the stage. It lists the notes in reading order, where each note's outputs go, the running example, the notation used across notes, and the GPU ladder that every calculation table uses. Update it after each new note.
+This file is the map for the stage. It lists the notes in reading order, where each note's outputs go, the running example, the notation used across notes, and the GPU ladder that every calculation table uses. Update it after each new note. Notes 02 to 05 use the lean structure: the running example first, then what the trainer reads, why it matters with numbers, the extra classic example, the checks, the math, the notebook cells, pitfalls and limits, a short self-test, and sources. Note 01 is still the long first version, and the long versions of notes 02 to 05 are kept in `full-versions/`.
 
-**Contents.**
-
-1. Reading Order and Status
-2. Folder Map
-3. The Running Example
-4. Notation Across Notes
-5. The GPU Ladder
-6. Quick Calculations for the First Day in an Organization
-7. Credits and Where to Run
-8. Conventions
-9. Assumptions and Corrections Log
-
----
-
-## 1. Reading Order and Status
+## **1. Reading Order and Status**
 
 | note | file | topic | status |
 |---|---|---|---|
 | 01 | [01-why-data-and-data-shapes.md](01-why-data-and-data-shapes.md) | why data is first, trainer shapes, row share versus token share | done |
-| 02 | [02-formats-and-chat-templates.md](02-formats-and-chat-templates.md) | storage formats, chat templates, loss masks | done |
-| 03 | [03-dataset-catalog-and-licenses.md](03-dataset-catalog-and-licenses.md) | where data comes from, what you may use, license audit | done |
-| 04 | [04-quality-and-deduplication.md](04-quality-and-deduplication.md) | exact, near and semantic duplicates, MinHash, LSH, reading rows | done |
-| 05 | [05-decontamination.md](05-decontamination.md) | train-test overlap, n-gram coverage, Min-K%, harness status | done |
+| 02 | [02-formats-and-chat-templates.md](02-formats-and-chat-templates.md) | storage formats, chat templates, loss masks | done, lean |
+| 03 | [03-dataset-catalog-and-licenses.md](03-dataset-catalog-and-licenses.md) | where data comes from, what you may use, license audit | done, lean |
+| 04 | [04-quality-and-deduplication.md](04-quality-and-deduplication.md) | exact, near and semantic duplicates, MinHash, LSH, reading rows | done, lean |
+| 05 | [05-decontamination.md](05-decontamination.md) | train-test overlap, n-gram coverage, Min-K%, harness status | done, lean |
 | 06 | 06-synthetic-data.md | rubric generation, model collapse | next |
 | 07 | 07-pii-and-eu-ai-act.md | scrubbing, provenance, documentation | planned |
 | 08 | 08-domain-dataset-and-splits.md | build, split, version | planned |
@@ -47,7 +33,7 @@ The next stage is Stage 04 Training Core, which reads the dataset this stage pro
 
 ---
 
-## 2. Folder Map
+## **2. Folder Map**
 
 ```text
 03_data_engineering/
@@ -79,7 +65,7 @@ Notes stay self-contained, with the notebook cells inside them. The other folder
 
 ---
 
-## 3. The Running Example
+## **3. The Running Example**
 
 Six rows about deep learning, each with one planned defect. Every note in the stage fixes one kind of defect.
 
@@ -112,7 +98,7 @@ Under template A, r1 has 12 tokens and 3 trained tokens. Under template B it has
 
 ---
 
-## 4. Notation Across Notes
+## **4. Notation Across Notes**
 
 | symbol | meaning | first used |
 |---|---|---|
@@ -146,7 +132,7 @@ Under template A, r1 has 12 tokens and 3 trained tokens. Under template B it has
 
 ---
 
-## 5. The GPU Ladder
+## **5. The GPU Ladder**
 
 The formulas in the notes use memory only, so GPUs are grouped by VRAM tier. Each tier stands for every GPU with that memory. Calculation tables in every note use these seven tiers.
 
@@ -196,7 +182,7 @@ The formulas in the notes use memory only, so GPUs are grouped by VRAM tier. Eac
 
 ---
 
-## 6. Quick Calculations for the First Day in an Organization
+## **6. Quick Calculations for the First Day in an Organization**
 
 When someone names a model and a GPU, these five steps take under a minute on paper.
 
@@ -212,7 +198,7 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 
 ---
 
-## 7. Credits and Where to Run
+## **7. Credits and Where to Run**
 
 | platform | free credit | recurring | source |
 |---|---|---|---|
@@ -226,7 +212,7 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 
 ---
 
-## 8. Conventions
+## **8. Conventions**
 
 - Note files are named `NN-kebab-topic.md`, two digits, reading order. Artifacts reuse the note's number.
 - Markdown only: no blockquotes, no em dashes or spaced dashes in prose, no emoji.
@@ -237,7 +223,7 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 
 ---
 
-## 9. Assumptions and Corrections Log
+## **9. Assumptions and Corrections Log**
 
 **Assumptions.**
 

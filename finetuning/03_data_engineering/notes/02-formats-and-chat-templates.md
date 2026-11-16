@@ -1,41 +1,8 @@
 # **Formats and Chat Templates**
 
-**Scope.** Stage 03 Data Engineering, note 02 of 09. Note 01 showed which shapes a trainer reads. This note follows one row all the way from a file on disk to the exact tokens and the exact loss mask the trainer sees. It covers the storage formats (Alpaca, ShareGPT, OpenAI messages), the chat template, special tokens, default system turns, and multi-turn loss masks. Licenses are covered in note 03, deduplication in note 04, and decontamination in note 05.
+*Stage 03 Data Engineering, note 02. Follows note 01, which showed what a trainer reads.*
 
-**Idea.** A conversation is a list of turns, but a model only reads a flat string of tokens. The chat template is the recipe that flattens one into the other, and it adds markers, sometimes a hidden system turn, and decides which tokens the loss can touch. Two datasets with identical words can train differently if their templates or masks differ, and no length histogram will tell you.
-
-**Where the numbers come from.**
-
-- Hand-calculated: every worked example in sections 5, 6 and 9, on a toy tokenizer where one word is one token.
-- Measured: every number labelled measured came from the verification script on CPU, using only the Python standard library.
-- Expected: how the GPU cells should behave. The sandbox has no GPU, so they were not run, and printed outputs are formats, not results.
-- Illustrative: the per-token losses in section 9.5 and the content-length spread in section 9.6.
-- From sources: template markers, default system turns, and field names, read from the model files and docs listed in section 18.
-
-**Contents.**
-
-1. The Running Example: One Row Through Two Templates
-2. Vocabulary Mapped to the Story
-3. Three Core Ideas
-4. The Definition in Plain Words, Then Formal
-5. Why the Previous Note Is Not Enough
-6. The Extra Classic Example: Which Turns Get Trained
-7. Formats, Templates and Masks
-8. The Render Check on 500 Rows
-9. Math Notation, Explained Step by Step
-10. Experiment Guide for Jupyter on GPU
-11. Limits and When It Fails
-12. Common Pitfalls
-13. Connection to Language Models and Modern AI
-14. Connection to the Next Topic
-15. Glossary
-16. Self-Test With Answers
-17. Key Points
-18. Sources and Verification
-
----
-
-## 1. The Running Example: One Row Through Two Templates
+## **1. The Running Example: One Row Through Two Templates**
 
 Take row r1 from note 01: "What does softmax do?" with the answer "Gives probabilities." Add a second round to make a short chat, and call it c1:
 
@@ -46,7 +13,7 @@ Take row r1 from note 01: "What does softmax do?" with the answer "Gives probabi
 | 3 | user | Why exp? |
 | 4 | assistant | Keeps scores positive. |
 
-We keep the toy tokenizer from note 01: one word is one token, punctuation is ignored. Now we need a chat template. Two invented templates, with the markers a real one would have:
+We keep the toy tokenizer from note 01: one word is one token, punctuation is ignored. Now we need a **chat template** (the recipe that turns a messages list into one string). Two invented templates, with the markers a real one would have:
 
 | template | each turn is written as | once at the start |
 |---|---|---|
@@ -69,102 +36,29 @@ flowchart LR
     I --> L["Loss mask: 1 only on tokens the model must write"]
 ```
 
-**The new ingredient.** Note 01 counted tokens as plain words and took the response share as 3 of 7. Here the template adds markers, so the same row has more tokens and a smaller trained share. This note refines the note 01 number (section 5).
+**The new ingredient.** Note 01 counted tokens as plain words and took the response share as 3 of 7. Here the template adds markers, so the same row has more tokens and a smaller trained share. This note refines the note 01 number (section 3).
+
+| **What you will learn** |
+|---|
+| How a row stored in a file becomes the exact tokens a model reads, and which of them it learns from. |
+| Why hidden tokens, a default system message and padding change what you train on, with hand calculations. |
+| How to check it on 500 rows, and how to size batches on every GPU tier. |
 
 ---
 
-## 2. Vocabulary Mapped to the Story
+## **2. What the Trainer Reads: Formats, Templates and Masks**
 
-| in the story | name | meaning |
-|---|---|---|
-| the four turns of c1 | **messages list** | an ordered list of role and content pairs, the canonical form |
-| the markers around each turn | **special tokens** | reserved tokens that carry structure, such as a turn end |
-| template A or B | **chat template** | the recipe that turns a messages list into one string |
-| the extra tokens a template adds | **overhead** | tokens that are not your words |
-| the marker that starts the assistant turn when the model must answer | **generation prompt** | the header added at the end so the model knows to write |
-| the end marker the model writes last | **end-of-turn token** | the token whose generation tells the system to stop |
-| the hidden first turn some templates add | **default system turn** | a system message inserted when you give none |
-| tokens the model must produce | **trained span** | assistant words plus their end marker |
-| tokens that fill short rows in a batch | **padding** | filler tokens that are never trained on |
-| rendering turn by turn gives the same prefix | **prefix-preserving template** | adding a message never changes how earlier messages look |
+### **2.1 The Definition in Plain Words, Then Formal**
 
----
+**Plain words.** A **chat template** takes a list of turns and writes one string. Tokenizing that string gives the ids the model reads. A **loss mask** (1 on the trained span and 0 elsewhere) says, for each id, whether the model must learn to produce it.
 
-## 3. Three Core Ideas
-
-**Idea 1. The template is part of the data.** The same six words give 12 tokens under template A and 15 under template B. Train with one template and serve with another and the model sees markers it never learned.
-
-**Idea 2. Hidden tokens count.** A default system turn, a date block, or a begin marker is added to every row. They cost tokens and dilute the trained share.
-
-**Idea 3. The mask is a decision, not a default.** Which turns of a chat get a loss depends on your trainer and your format. The default differs across tools (section 7.6).
-
----
-
-## 4. The Definition in Plain Words, Then Formal
-
-**Plain words.** A **chat template** takes a list of turns and writes one string. Tokenizing that string gives the ids the model reads. A **loss mask** says, for each id, whether the model must learn to produce it.
-
-**Formal.** A template is a function $\mathcal{R}$ from a messages list $M = (m_1, \dots, m_n)$ to a token sequence $\mathcal{R}(M)$ of length $T$. The loss mask is $m_t \in \{0, 1\}$ for $t = 1..T$. It is the **trained span** when $m_t = 1$ exactly on the tokens of assistant content and its end-of-turn token. A template is **prefix-preserving** when, for every $k$, the render of the first $k$ messages is a prefix of the render of all $n$ messages.
+**Formal.** A template is a function $\mathcal{R}$ from a **messages list** (an ordered list of role and content pairs, the canonical form) $M = (m_1, \dots, m_n)$ to a token sequence $\mathcal{R}(M)$ of length $T$. The loss mask is $m_t \in \{0, 1\}$ for $t = 1..T$. It is the **trained span** (assistant words plus their end marker) when $m_t = 1$ exactly on the tokens of assistant content and its **end-of-turn token** (the token whose generation tells the system to stop). A template is **prefix-preserving** when, for every $k$, the render of the first $k$ messages is a prefix of the render of all $n$ messages.
 
 The mask is built from prefixes: the tokens of assistant turn $k$ are the ones in $\mathcal{R}(m_1..m_k)$ that are not in $\mathcal{R}(m_1..m_{k-1}, \text{generation prompt})$. This works only if the template is prefix-preserving, which is checked in cell 6.
 
----
+### **2.2 The three storage formats**
 
-## 5. Why the Previous Note Is Not Enough
-
-Note 01 gave the response share of r1 as $3/7 = 0.4286$ with no template. Real data always has one, so the number changes.
-
-| rendering | total tokens | trained tokens | trained share |
-|---|---|---|---|
-| no template (note 01) | 7 | 3 | 0.4286 |
-| template A | 12 | 3 | 0.2500 |
-| template B | 15 | 3 | 0.2000 |
-| template A plus a default system turn of 12 words | 27 | 3 | 0.1111 |
-
-Hand check for template A with a default system turn: the system turn adds a start marker, the role, 12 words and an end marker, which is $1 + 1 + 12 + 1 = 15$ tokens. So $12 + 15 = 27$ and $3/27 = 0.1111$. The script matches every row of this table (measured).
-
-**Refinement.** Note 01 section 9.5 gave $r = 3/7$. That is the share without a template. From here on, $r$ is computed after the template.
-
----
-
-## 6. The Extra Classic Example: Which Turns Get Trained
-
-The single-turn row r1 hides a question: in a four-turn chat, which assistant turns count? Conversation c1 under template A:
-
-| turn | rendered tokens | count |
-|---|---|---|
-| user 1 | start, user, what, does, softmax, do, end | 7 |
-| assistant 1 | start, assistant, gives, probabilities, end | 5 |
-| user 2 | start, user, why, exp, end | 5 |
-| assistant 2 | start, assistant, keeps, scores, positive, end | 6 |
-| total | | 23 |
-
-The start marker and role of an assistant turn belong to the generation prompt, so the trained tokens of assistant 1 are "gives, probabilities, end" and of assistant 2 are "keeps, scores, positive, end".
-
-```mermaid
-flowchart TD
-    C["c1: 23 tokens"] --> A["All assistant turns: 3 + 4 = 7 tokens"]
-    C --> L["Last assistant turn only: 4 tokens"]
-    C --> X["All tokens: 23 tokens"]
-```
-
-| mask choice | trained tokens | share of 23 |
-|---|---|---|
-| all assistant turns | 7 | 0.3043 |
-| last assistant turn only | 4 | 0.1739 |
-| all tokens | 23 | 1.0000 |
-
-Hand check: $7/23 = 0.3043$ and $4/23 = 0.1739$. The script builds the mask from prefixes and gets 7 and 4 (measured).
-
-**Beginner trap.** Training on all tokens teaches the model to write user turns and markers. Training on the last turn only throws away three trained tokens per extra turn.
-
----
-
-## 7. Formats, Templates and Masks
-
-### 7.1 The three storage formats
-
-**Intuition.** Different tools wrote different files. Each one is a way to store the same list of turns.
+**Storage formats** in short: the Alpaca, ShareGPT or messages file the row came from. **Intuition.** Different tools wrote different files. Each one is a way to store the same list of turns.
 
 | format | fields | roles | source |
 |---|---|---|---|
@@ -174,7 +68,7 @@ Hand check: $7/23 = 0.3043$ and $4/23 = 0.1739$. The script builds the mask from
 
 The Anyscale guide describes the OpenAI format as ShareGPT with `role` and `content` in place of `from` and `value`.
 
-**Precise statement.** All three convert to one canonical form, the messages list.
+**Precise statement.** All three convert to one **canonical form** (the messages list every file is converted to), the messages list.
 
 ```text
 alpaca row      -> user content = instruction, plus a newline and input when input is not empty
@@ -186,11 +80,11 @@ openai messages -> already canonical
 
 **Worked example.** `{"instruction": "Explain warmup.", "input": "Keep it short.", "output": "It ramps the rate."}` becomes a user turn "Explain warmup." then a newline then "Keep it short.", and an assistant turn "It ramps the rate."
 
-**Beginner trap.** The joiner between instruction and input is a convention. LLaMA-Factory uses one newline. The source note's code uses a blank line. Either works if you use one everywhere, and mixed joiners across files create hidden variants.
+**Beginner trap.** The **joiner** (the newline between instruction and input) between instruction and input is a convention. LLaMA-Factory uses one newline. The source note's code uses a blank line. Either works if you use one everywhere, and mixed joiners across files create hidden variants.
 
 **Beginner trap 2.** In the Alpaca format of LLaMA-Factory, the `history` responses are also learned during SFT. If you put old answers there only as context, they still get a loss.
 
-### 7.2 Tool messages
+### **2.3 Tool messages**
 
 **Intuition.** A tool call is an assistant turn that contains a call instead of words, followed by a tool result turn.
 
@@ -205,29 +99,29 @@ assistant: "It is 18 degrees in Paris."
 
 **Beginner trap.** Different templates render the tool turn differently. The Qwen2.5 template writes a tool result as a user turn wrapped in tool response tags, so your tool role is not a real role there.
 
-### 7.3 Special tokens and the end of a turn
+### **2.4 Special tokens and the end of a turn**
 
-**Intuition.** The model must learn when to stop, so the stop token has to be inside the trained span.
+**Special tokens** in short: reserved tokens that carry structure, such as a turn end. **Intuition.** The model must learn when to stop, so the stop token has to be inside the trained span.
 
 **Precise statement.** Each family has its own markers. Qwen2.5 uses a start and end marker pair per turn, its `eos_token` is the turn end marker, and its `pad_token` is a different token. Llama 3.1 uses begin of text, header start and header end around the role, and an end-of-turn token, and Meta also lists a separate padding token for fine-tuning.
 
 **Worked example.** From the Qwen2.5 tokenizer config: the end marker has id 151645 and the pad token has id 151643, two different ids. A Llama cookbook issue discusses that the end-of-turn token is the right one to train with while the model config and the tokenizer disagree on the eos id (128001 versus 128009).
 
-**Beginner trap.** Setting the pad token equal to the eos token is common. If the loss code then masks every position whose id equals the pad id, it also masks the real end marker, and the model never learns to stop (section 9.5).
+**Beginner trap.** Setting the pad token equal to the eos token is common. If the loss code then masks every position whose id equals the pad id, it also masks the real end marker, and the model never learns to stop (section 6.5).
 
-### 7.4 Default system turns
+### **2.5 Default system turns**
 
-**Intuition.** Some templates add a system turn when you give none.
+**Default system turns** in short: a system message inserted when you give none. **Intuition.** Some templates add a system turn when you give none.
 
 **Precise statement.** The Qwen2.5 template writes "You are Qwen, created by Alibaba Cloud. You are a helpful assistant." as the first turn when the first message is not a system message. The Llama 3.1 template writes a block with a knowledge cutoff date and "Today Date" even when you pass no system prompt, and the date comes from a template variable called `date_string`.
 
-**Why it matters.** Every row carries these tokens, so they dilute the trained share (section 5). For Llama 3.1 the "Today Date" changes the rendered text on a different day unless you fix `date_string`. Render once and store the text, or pass a fixed date, so that a dataset snapshot is reproducible.
+**Why it matters.** Every row carries these tokens, so they dilute the trained share (section 3). For Llama 3.1 the "Today Date" changes the rendered text on a different day unless you fix `date_string`. Render once and store the text, or pass a fixed date, so that a dataset snapshot is reproducible.
 
-### 7.5 Tokenizing the rendered text
+### **2.6 Tokenizing the rendered text**
 
 **Precise statement.** The template already contains every special token it needs. After `apply_chat_template(tokenize=False)`, tokenize with `add_special_tokens=False`, as the Hugging Face docs advise, or markers such as a begin token get doubled.
 
-### 7.6 Building the loss mask
+### **2.7 Building the loss mask**
 
 **Intuition.** You want the loss on assistant words and their end marker and nothing else.
 
@@ -255,7 +149,7 @@ TRL documents that assistant-only loss needs the template to include the `genera
 
 **Prefix-preserving.** Some templates drop reasoning from earlier assistant turns, which changes how earlier turns render when you add a message. The TRL chat template notes call this property prefix-preserving and say that DeepSeek-R1-distill style templates re-render assistant turns without their reasoning. For such templates the prefix method fails, as the toy template C does in the script.
 
-### 7.7 Comparison and assumptions
+### **2.8 Comparison and assumptions**
 
 | choice | strength | assumption that can fail |
 |---|---|---|
@@ -266,7 +160,63 @@ TRL documents that assistant-only loss needs the template to include the `genera
 
 ---
 
-## 8. The Render Check on 500 Rows
+## **3. Why It Matters, With Numbers**
+
+Three ideas to keep in mind:
+
+- The template is part of the data.
+- Hidden tokens count.
+- The mask is a decision, not a default.
+
+Note 01 gave the response share of r1 as $3/7 = 0.4286$ with no template. Real data always has one, so the number changes.
+
+| rendering | total tokens | trained tokens | trained share |
+|---|---|---|---|
+| no template (note 01) | 7 | 3 | 0.4286 |
+| template A | 12 | 3 | 0.2500 |
+| template B | 15 | 3 | 0.2000 |
+| template A plus a default system turn of 12 words | 27 | 3 | 0.1111 |
+
+Hand check for template A with a default system turn: the system turn adds a start marker, the role, 12 words and an end marker, which is $1 + 1 + 12 + 1 = 15$ tokens. So $12 + 15 = 27$ and $3/27 = 0.1111$. The script matches every row of this table (measured).
+
+**Refinement.** Note 01 section 9.5 gave $r = 3/7$. That is the share without a template. From here on, $r$ is computed after the template.
+
+---
+
+## **4. The Extra Classic Example: Which Turns Get Trained**
+
+The single-turn row r1 hides a question: in a four-turn chat, which assistant turns count? Conversation c1 under template A:
+
+| turn | rendered tokens | count |
+|---|---|---|
+| user 1 | start, user, what, does, softmax, do, end | 7 |
+| assistant 1 | start, assistant, gives, probabilities, end | 5 |
+| user 2 | start, user, why, exp, end | 5 |
+| assistant 2 | start, assistant, keeps, scores, positive, end | 6 |
+| total | | 23 |
+
+The start marker and role of an assistant turn belong to the **generation prompt** (the header added at the end so the model knows to write), so the trained tokens of assistant 1 are "gives, probabilities, end" and of assistant 2 are "keeps, scores, positive, end".
+
+```mermaid
+flowchart TD
+    C["c1: 23 tokens"] --> A["All assistant turns: 3 + 4 = 7 tokens"]
+    C --> L["Last assistant turn only: 4 tokens"]
+    C --> X["All tokens: 23 tokens"]
+```
+
+| mask choice | trained tokens | share of 23 |
+|---|---|---|
+| all assistant turns | 7 | 0.3043 |
+| last assistant turn only | 4 | 0.1739 |
+| all tokens | 23 | 1.0000 |
+
+Hand check: $7/23 = 0.3043$ and $4/23 = 0.1739$. The script builds the mask from prefixes and gets 7 and 4 (measured).
+
+**Beginner trap.** Training on all tokens teaches the model to write user turns and markers. Training on the last turn only throws away three trained tokens per extra turn.
+
+---
+
+## **5. The Render Check on 500 Rows**
 
 Note 01 introduced the check "render 500 rows". Here is what to look for.
 
@@ -288,17 +238,17 @@ for each row:
 print rows that fail, and the first failing text
 ```
 
-**Read this honestly.** The source note says a bimodal length distribution means two templates are mixed. That is unreliable. Two templates differ by a handful of tokens, while real answers differ by hundreds. Section 9.6 shows with numbers that the length histogram does not reveal a mix. Count markers instead.
+**Read this honestly.** The source note says a bimodal length distribution means two templates are mixed. That is unreliable. Two templates differ by a handful of tokens, while real answers differ by hundreds. Section 6.6 shows with numbers that the length histogram does not reveal a mix. Count markers instead.
 
 **Beginner trap.** Looking at one rendered row. A template difference may appear only in multi-turn rows or only in rows with tools.
 
 ---
 
-## 9. Math Notation, Explained Step by Step
+## **6. The Math, Step by Step**
 
 This section lists every new symbol and formula. Cover the steps, do the calculation yourself on paper, then compare with the boxed value. Symbols from note 01 keep their meaning: $x$, $y_t$, $m_t$, $\ell_t$, $T$, $B$, $V$, $L$.
 
-### 9.1 Notation table
+### **6.1 Notation table**
 
 | symbol | read aloud | meaning | in the running example |
 |---|---|---|---|
@@ -319,7 +269,7 @@ This section lists every new symbol and formula. Cover the steps, do the calcula
 
 **Reading tips.** The letter $c$ here means a constant overhead and never a count of rows, which was $c_k$ in note 01. The letter $q$ is used for a mixing share so it does not clash with $\pi_\theta$.
 
-### 9.2 Rendered length
+### **6.2 Rendered length**
 
 $$T = C + k\,n + c$$
 
@@ -349,11 +299,11 @@ T_B &= 11 + 4 \times 4 + 1 = \boxed{28}
 
 **Check.** The render in section 1 and the script both give 12, 15, 23 and 28 (measured).
 
-### 9.3 Overhead share and trained share
+### **6.3 Overhead share and trained share**
 
 $$\text{overhead share} = \frac{k\,n + c + d}{T} \qquad r = \frac{\sum_t m_t}{T}$$
 
-**What it says.** How much of the row is not your words, and how much of the row is trained on.
+**Overhead** in short: tokens that are not your words. **What it says.** How much of the row is not your words, and how much of the row is trained on.
 
 **Worked example.** Row r1 under B:
 
@@ -369,7 +319,7 @@ Under A: overhead $6/12 = 0.5000$ and $r = 3/12 = \boxed{0.2500}$. With the 15 t
 
 **Beginner trap.** Quoting the note 01 value $3/7$ for a real tokenizer.
 
-### 9.4 Trained tokens in a conversation
+### **6.4 Trained tokens in a conversation**
 
 $$\sum_t m_t = \sum_{j \,\in\, \text{assistant turns}} \left( C_j + 1 \right)$$
 
@@ -386,13 +336,13 @@ r &= \frac{7}{23} = \boxed{0.3043}
 
 Last turn only: $4/23 = \boxed{0.1739}$. All tokens: $23/23 = \boxed{1.0000}$.
 
-**Extreme case.** With $n = 2$ and one assistant turn this reduces to section 9.3. With many short assistant turns the all-assistant mask trains much more than the last-turn mask.
+**Extreme case.** With $n = 2$ and one assistant turn this reduces to section 6.3. With many short assistant turns the all-assistant mask trains much more than the last-turn mask.
 
 **Beginner trap.** Counting the assistant header as trained. The model never has to write it, since the generation prompt provides it.
 
-**Check.** Matches the table in section 6 and the prefix based mask in the script (measured).
+**Check.** Matches the table in section 4 and the prefix based mask in the script (measured).
 
-### 9.5 Masked mean and the end marker
+### **6.5 Masked mean and the end marker**
 
 $$L = \frac{\sum_t m_t\,\ell_t}{\sum_t m_t} \qquad \frac{\partial L}{\partial z_t} = \frac{m_t}{\sum_s m_s}\,\left(p_t - \mathbf{1}_{y_t}\right)$$
 
@@ -433,7 +383,7 @@ With that position masked the gradient is exactly 0, so nothing pushes the model
 
 **Beginner trap.** A higher loss in step 3 looks like a harder dataset. It is a masking bug.
 
-### 9.6 Why the length histogram cannot show a template mix
+### **6.6 Why the length histogram cannot show a template mix**
 
 Suppose a share $q$ of rows use template B and the rest use A, on the same content. Then:
 
@@ -457,13 +407,13 @@ The standard deviation of the content is $\sqrt{1.25} = 1.118$, so $\Delta / 1.1
 
 **Extreme case.** At $q = 0$ or $q = 1$ the extra term is zero, since there is no mix.
 
-**Beginner trap.** Trusting a smooth histogram. Count the markers per row instead (section 8).
+**Beginner trap.** Trusting a smooth histogram. Count the markers per row instead (section 5).
 
-### 9.7 Padding waste and batch size per GPU
+### **6.7 Padding waste and batch size per GPU**
 
 $$W = 1 - \frac{\sum_i T_i}{B \cdot \max_i T_i} \qquad B_{\max} = \left\lfloor \frac{0.2 \cdot \text{VRAM}}{4\,V\,T} \right\rfloor$$
 
-**What it says.** A batch is padded to its longest row, and the waste is the share of padded positions. The second formula reuses the logits memory rule from note 01 section 9.7, with the same illustrative 20 percent budget, to find the largest batch for a sequence length $T$.
+**Padding** in short: filler tokens that are never trained on. **What it says.** A batch is padded to its longest row, and the waste is the share of padded positions. The second formula reuses the logits memory rule from note 01 section 9.7, with the same illustrative 20 percent budget, to find the largest batch for a sequence length $T$.
 
 **Worked example, padding.** Four rows of lengths 12, 13, 15, 18:
 
@@ -499,7 +449,7 @@ $B_{\max}$ is per GPU. With data parallel training each GPU holds its own batch 
 
 **Beginner trap.** Treating $B_{\max}$ as a guarantee. It covers only the logits and the 20 percent share is illustrative, so weights, gradients and activations come on top.
 
-### 9.8 All formulas and answers
+### **6.8 All formulas and answers**
 
 | formula | input | answer |
 |---|---|---|
@@ -517,7 +467,7 @@ $B_{\max}$ is per GPU. With data parallel training each GPU holds its own batch 
 | $W$ | lengths 12, 13, 15, 18 | 0.1944 |
 | $B_{\max}$, L4, $T=1024$ | $4.8 \times 10^9 / 622{,}329{,}856$ | 7 |
 
-### 9.9 Pen-and-paper rules
+### **6.9 Pen-and-paper rules**
 
 1. Always write $T = C + kn + c$ before comparing lengths.
 2. The trained span is assistant words plus one end marker per assistant turn.
@@ -532,7 +482,7 @@ $B_{\max}$ is per GPU. With data parallel training each GPU holds its own batch 
 
 ---
 
-## 10. Experiment Guide for Jupyter on GPU
+## **7. Notebook Experiments on GPU**
 
 These cells run in a GPU notebook: a Lightning AI Studio, a Modal Notebook, or your organization's cluster. They were checked for syntax and not run, since the sandbox has no GPU. Run cells 1 and 2 first. After that each cell can be rerun alone, except that cells 6 to 8 need cell 5.
 
@@ -699,14 +649,14 @@ from transformers import AutoModelForCausalLM
 
 model = AutoModelForCausalLM.from_pretrained(model_name, dtype=dtype).to("cuda")
 
-print(f"weights memory = {torch.cuda.memory_allocated() / 1e9:.2f} GB")
+print(f"weights memory: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
 print("eos", tokenizer.eos_token, tokenizer.eos_token_id)
 print("pad", tokenizer.pad_token, tokenizer.pad_token_id)
 assert tokenizer.eos_token_id != tokenizer.pad_token_id, "pad equals eos"
 ```
 
 ```text
-weights memory = <about 1.0> GB
+weights memory: <about 1.0> GB
 eos <|im_end|> 151645
 pad <|endoftext|> 151643
 ```
@@ -715,7 +665,7 @@ The ids come from the model's tokenizer config. If you try another model whose p
 
 ```python
 # ── Cell 6. Sanity check: trained span from prefixes ─────────────
-#    Reproduce section 6 on the real tokenizer
+#    Reproduce section 4 on the real tokenizer
 #    Each prefix render must be a prefix of the full render
 # ─────────────────────────────────────────────────────────────────
 def encode(messages, generation=False):
@@ -742,7 +692,7 @@ print("tokens", len(full_ids), "trained", trained, f"share {trained / len(full_i
 tokens <n> trained <n> share <between 0.0 and 1.0>
 ```
 
-The toy share was $7/23 = 0.3043$. The real share is lower, because the real template adds a default system turn and a newline after each end marker, and the newline counts as trained here. If the assert fails, your template is not prefix-preserving, so use another mask method from section 7.6.
+The toy share was $7/23 = 0.3043$. The real share is lower, because the real template adds a default system turn and a newline after each end marker, and the newline counts as trained here. If the assert fails, your template is not prefix-preserving, so use another mask method from section 2.7.
 
 ```python
 # ── Cell 7. Loss under three masks ───────────────────────────────
@@ -760,13 +710,13 @@ with torch.no_grad():
     for name, mask in masks.items():
         label_ids = torch.tensor([mask], device="cuda")
         loss = model(input_ids=input_ids, labels=label_ids).loss
-        print(f"{name:16s} loss = {loss.item():.4f}")
+        print(f"{name:16s} loss: {loss.item():.4f}")
 ```
 
 ```text
-assistant only   loss = <value>
-last turn only   loss = <value>
-all tokens       loss = <value>
+assistant only   loss: <value>
+last turn only   loss: <value>
+all tokens       loss: <value>
 ```
 
 ```python
@@ -786,19 +736,19 @@ for batch in [1, 2, 4]:
     seconds = time.time() - start
     peak = torch.cuda.max_memory_allocated() / 1e9
     logits = batch * 512 * model.config.vocab_size * 4 / 1e9
-    print(f"B={batch}  peak {peak:5.2f} GB  logits {logits:4.2f} GB  {batch * 512 / seconds:8.0f} tok/s")
+    print(f"batch: {batch}  peak: {peak:5.2f} GB  logits: {logits:4.2f} GB  speed: {batch * 512 / seconds:8.0f} tok/s")
     model.zero_grad(set_to_none=True)
 ```
 
 ```text
-B=1  peak <x> GB  logits 0.31 GB  <n> tok/s
-B=2  peak <x> GB  logits 0.62 GB  <n> tok/s
-B=4  peak <x> GB  logits 1.24 GB  <n> tok/s
+batch: 1  peak: <x> GB  logits: 0.31 GB  speed: <n> tok/s
+batch: 2  peak: <x> GB  logits: 0.62 GB  speed: <n> tok/s
+batch: 4  peak: <x> GB  logits: 1.24 GB  speed: <n> tok/s
 ```
 
 The logits column is hand-calculated: $4 \times 512 \times 151936 \times 4 = 1.2447 \times 10^9$ bytes. The first pass includes warm-up, so ignore the speed at $B = 1$.
 
-### 10.1 Results table template
+### **7.1 Results table template**
 
 | GPU | marker count failures | p95 length | loss assistant only | loss last only | peak GB at B=4 | tok/s at B=4 |
 |---|---|---|---|---|---|---|
@@ -812,14 +762,14 @@ The logits column is hand-calculated: $4 \times 512 \times 151936 \times 4 = 1.2
 
 The before and after comparison on fixed prompts is skipped, because nothing is trained here. It appears in the SFT note. The tokenizer outputs and the mask do not depend on the GPU, so the first three columns should match across GPUs.
 
-### 10.2 Expected behavior (expected, not yet verified)
+### **7.2 Expected behavior (expected, not yet verified)**
 
 - The default system turn makes the no-system count larger than the explicit-system count.
 - The all-token loss is not equal to the assistant-only loss, because prompt tokens are easier or harder than answers.
 - Peak memory grows with batch size, and part of the growth tracks the logits column.
 - Larger GPUs fit larger batches, in line with the $B_{\max}$ table. Speed gains are smaller than the size gains, since a 0.5B model at $B = 4$ may not fill a large GPU.
 
-### 10.3 If you run out of memory
+### **7.3 If you run out of memory**
 
 1. Lower the batch size in cell 8, then lower $T$.
 2. Use gradient accumulation to keep the effective batch.
@@ -831,22 +781,9 @@ GPU runs are not exactly reproducible, so compare trends, not exact numbers.
 
 ---
 
-## 11. Limits and When It Fails
+## **8. Pitfalls and Limits**
 
-**What the checks need.** A tokenizer that matches the model you will serve, and a person who reads the rendered text.
-
-**Where they fail.**
-
-- The marker count check cannot see a wrong joiner, such as one newline versus two, between instruction and input.
-- The prefix method fails on templates that rewrite earlier turns, such as ones that strip earlier reasoning.
-- Assistant-only loss depends on `generation` markers that many templates lack, so a flag can be silent or fail.
-- Template versions drift. A model repo can change its template, and the same messages then render differently.
-- Memory tiers ignore speed, and the batch size formula is per GPU and counts only the logits.
-- The toy numbers use one word per token. Real tokenizers split words, so the real shares differ.
-
----
-
-## 12. Common Pitfalls
+**Pitfalls that really bite.**
 
 1. **Training and serving with different templates.** The model meets markers it never saw.
 2. **Doubled special tokens.** Tokenizing a rendered string with default settings adds a begin token twice.
@@ -854,8 +791,16 @@ GPU runs are not exactly reproducible, so compare trends, not exact numbers.
 4. **Hidden system turns.** Default system and date blocks inflate every row and dilute the trained share.
 5. **Date drift.** A "Today Date" in a template changes the text on another day.
 6. **Alpaca history is trained.** Old answers meant as context still get a loss.
-7. **Mixed joiners.** One newline in some files and a blank line in others.
+7. **Mixed joiners.** One newline in some files and a blank line in others. The marker count check cannot see this.
 8. **Trusting a flag.** Check the mask on one row by printing which tokens have labels.
+
+**Limits that remain.**
+
+- The prefix method fails on templates that rewrite earlier turns, such as ones that strip earlier reasoning.
+- Assistant-only loss depends on `generation` markers that many templates lack, so a flag can be silent or fail.
+- Template versions drift. A model repo can change its template, and the same messages then render differently.
+- Memory tiers ignore speed, and the batch size formula is per GPU and counts only the logits.
+- The toy numbers use one word per token. Real tokenizers split words, so the real shares differ.
 
 **Debugging checklist.**
 
@@ -867,120 +812,47 @@ GPU runs are not exactly reproducible, so compare trends, not exact numbers.
 
 ---
 
-## 13. Connection to Language Models and Modern AI
+## **9. How This Shows Up in Language Models**
 
-| topic idea | in a chat model or agent |
-|---|---|
-| chat template | how a served chat model turns your conversation into tokens, so it must match training |
-| generation prompt | the assistant header that makes the model start answering |
-| end-of-turn token | what the serving system watches for to stop generation |
-| default system turn | the identity or date block a model family was trained with |
-| tool turns | how an agent call and its result are written into the context |
+- A chat template turns your conversation into tokens, so it must be the same at training time and at serving time.
+- The generation prompt starts the answer, and the end-of-turn token is what a server watches to stop it.
+- A default system turn is the identity or date block a model family was trained with.
+- Tool turns are how an agent call and its result are written into the context.
+- Which turns train is a format decision that differs across tools: the OpenAI `weight` field, the LLaMA-Factory `history` behavior, and TRL assistant-only loss.
 
-**Point 1. Templates are model specific.** Hugging Face documents that chat templates carry the special tokens a model needs and that you should not add them a second time. Qwen2.5 and Llama 3.1 differ in markers, in default system turns and in how tools are written.
+Hugging Face documents that templates already carry the special tokens a model needs, and Qwen2.5 and Llama 3.1 differ in markers, default system turns and tool layout. The prefix mask in cell 6 works on any prefix-preserving template, so it is a useful check when assistant-only loss is not available. Added by me, not in the source note: the overhead formula, the trained-share refinement, the batch size per GPU table and the marker count check.
 
-**Point 2. Tooling support for masks is uneven.** TRL documents assistant-only loss, needs template markers for it, and bundles patched templates for some families. This is why the prefix method in cell 6 is useful as a template-independent check.
-
-**Point 3. Format fields carry training decisions.** The OpenAI `weight` field and the LLaMA-Factory `history` behavior decide which turns train, and they are easy to miss when converting formats.
-
-**Added (not in the source note).** The overhead formula, the trained-share refinement, the padding and batch size per GPU table, and the marker count check.
+**Next.** Note 03 covers the dataset catalog and licenses: where rows come from and what you may do with them.
 
 ---
 
-## 14. Connection to the Next Topic
-
-Next is note 03: the dataset catalog and licenses. It tells you where rows come from and what you may do with them, before you convert and train.
-
-| order | topic | what it adds | status |
-|---|---|---|---|
-| 01 | Why data and data shapes | shapes, shares, cheap checks | done |
-| 02 | Formats and chat templates | conversion, templates, masks | this note |
-| 03 | Dataset catalog and licenses | sources and permitted use | next |
-| 04 | Quality and deduplication | exact and near-duplicate removal | planned |
-| 05 | Decontamination | removing eval leaks | planned |
-| 06 | Synthetic data | rubric generation, model collapse | planned |
-| 07 | PII and the EU AI Act | scrubbing and documentation | planned |
-| 08 | Domain dataset and splits | build, split, version | planned |
-| 09 | Pre-flight and acceptance gate | the exit checklist | planned |
-
-The roadmap order was not pasted, so this order is assumed from the Stage 03 split.
-
----
-
-## 15. Glossary
-
-| term | meaning with the running example |
-|---|---|
-| **messages list** | the four turns of c1 as role and content pairs |
-| **chat template** | template A or B, the recipe that writes the turns as one string |
-| **special tokens** | the start and end markers in template A |
-| **overhead** | the 6 non-word tokens in r1 under template A |
-| **generation prompt** | the start marker and role that open the assistant turn |
-| **end-of-turn token** | the end marker the model writes after "probabilities" |
-| **default system turn** | the 15 token system turn added when none is given |
-| **trained span** | "gives probabilities end", 3 tokens in r1 |
-| **padding** | filler added so 12, 13, 15 and 18 token rows share one batch |
-| **prefix-preserving template** | a template like A where the first two turns render the same inside c1 |
-| **loss mask** | 1 on the trained span and 0 elsewhere |
-| **storage format** | the Alpaca, ShareGPT or messages file the row came from |
-| **canonical form** | the messages list every file is converted to |
-| **joiner** | the newline between instruction and input |
-
----
-
-## 16. Self-Test With Answers
+## **10. Self-Test**
 
 **Q1.** A conversation has a user turn "Why warmup?" and an assistant turn "Avoids spikes." Find $T$ under templates A and B.
 
-**Q2.** Find the overhead share for template B in Q1.
+**Q2.** A chat has three assistant turns of 5 words and three user turns of 4 words, under template A. Find the trained share.
 
-**Q3.** A chat has three assistant turns of 5 words and three user turns of 4 words, under template A. Find the trained share.
+**Q3.** Spot the mistake: "I set the pad token to the eos token, which is safe because padding is ignored by the loss."
 
-**Q4.** A batch has rows of 10, 20 and 30 tokens. Find the padding waste.
+**Q4.** Spot the mistake: "My length histogram has one hump, so all rows use one template."
 
-**Q5.** For an L4 at $T = 1024$ and $V = 151{,}936$, find $B_{\max}$ with the 20 percent budget.
-
-**Q6.** Spot the mistake: "I set the pad token to the eos token, which is safe because padding is ignored by the loss."
-
-**Q7.** Spot the mistake: "My length histogram has one hump, so all rows use one template."
-
-**Q8.** Why must a template be prefix-preserving for the prefix mask method?
+**Q5.** Why must a template be prefix-preserving for the prefix mask method?
 
 **Answers.**
 
 **A1.** $C = 2 + 2 = 4$, $n = 2$. Template A: $4 + 3 \times 2 + 0 =$ $\boxed{10}$. Template B: $4 + 4 \times 2 + 1 =$ $\boxed{13}$.
 
-**A2.** $(4 \times 2 + 1)/13 = 9/13 =$ $\boxed{0.6923}$.
+**A2.** Content $C = 3 \times 5 + 3 \times 4 = 27$, $n = 6$, so $T = 27 + 3 \times 6 = 45$. Trained tokens $= 3 \times (5 + 1) = 18$. Share $= 18/45 =$ $\boxed{0.4}$.
 
-**A3.** Content $C = 3 \times 5 + 3 \times 4 = 27$, $n = 6$, so $T = 27 + 3 \times 6 = 45$. Trained tokens $= 3 \times (5 + 1) = 18$. Share $= 18/45 =$ $\boxed{0.4}$.
+**A3.** If the loss code masks every position whose id equals the pad id, it also masks the real end marker. The model never learns to stop. Use a separate pad token.
 
-**A4.** Sum is 60 and $3 \times 30 = 90$, so $W = 1 - 60/90 =$ $\boxed{0.3333}$.
+**A4.** A template mix shifts lengths by a few tokens, while real content varies by hundreds. In section 6.6 the shift over the spread is 0.01, so a mix is invisible. Count markers per row instead.
 
-**A5.** $0.2 \times 24 \times 10^9 = 4.8 \times 10^9$ and $607744 \times 1024 = 622{,}329{,}856$. The ratio is 7.713, floored to $\boxed{7}$.
-
-**A6.** If the loss code masks every position whose id equals the pad id, it also masks the real end marker. The model never learns to stop. Use a separate pad token.
-
-**A7.** A template mix shifts lengths by a few tokens, while real content varies by hundreds. In section 9.6 the shift over the spread is 0.01, so a mix is invisible. Count markers per row instead.
-
-**A8.** The method renders prefixes and marks the new tokens. If adding a message changes how earlier turns look, the prefix is not a prefix of the full render, and the marked positions are wrong.
+**A5.** The method renders prefixes and marks the new tokens. If adding a message changes how earlier turns look, the prefix is not a prefix of the full render, and the marked positions are wrong.
 
 ---
 
-## 17. Key Points
-
-1. Convert every storage format to one messages list, then render with the target model's template.
-2. Rendered length is $T = C + kn + c$, and real templates also add hidden turns.
-3. The trained span is assistant words plus one end marker per assistant turn.
-4. Divide the loss by the number of trained tokens, and a masked token has zero gradient.
-5. Never let the pad token equal the eos token, or the end marker can be masked.
-6. Defaults differ across tools, so decide which assistant turns to train and verify the mask by printing it.
-7. Check templates by counting markers per row, not by looking at the length histogram.
-8. Render once and store the text, or fix template variables such as dates, so the dataset is reproducible.
-9. Pick batch size from the logits budget and sequence length, then check peak memory.
-
----
-
-## 18. Sources and Verification
+## **11. Sources and Verification**
 
 **Sources used.**
 
@@ -998,7 +870,8 @@ The roadmap order was not pasted, so this order is assumed from the Stage 03 spl
 - Hugging Face chat templates, https://huggingface.co/docs/transformers/chat_templating
 - Modal pricing and GPU docs (the GPU ladder), https://modal.com/pricing and https://modal.com/docs/guide/gpu
 
-**Checked by running code.** The verification script reproduced, with asserts, every hand-calculated number in sections 5, 6, 9 and 16: lengths 12, 15, 23 and 28, trained shares including the default system case, the prefix-built masks of 7 and 4 tokens, the masked means and the end marker gradient, the variance of the template mix, the padding waste, the batch sizes for the seven GPU tiers, and the format conversions. It also confirms that a template that rewrites earlier turns fails the prefix check. All eight code cells in section 10 were checked with `ast.parse`.
+
+**Verification note.** A script reproduced every hand-calculated number with asserts, including that a template that rewrites earlier turns fails the prefix check, and all eight notebook cells passed `ast.parse`. The GPU cells were not run, so their outputs are formats.
 
 **Checked on the web.** The Qwen2.5 default system sentence, its eos and pad tokens, and the absence of a `generation` keyword in its template. The Llama 3.1 markers, default date block and `date_string` variable. The Alpaca and ShareGPT fields, the odd and even turn rule, and the learned history responses. The OpenAI `weight` field and tool call shape. The TRL requirement for `generation` markers and the prefix-preserving idea.
 
@@ -1006,8 +879,18 @@ The roadmap order was not pasted, so this order is assumed from the Stage 03 spl
 
 **Corrections to the source note.**
 
-- The source says a bimodal length distribution means two templates are mixed. Section 9.6 shows a mix is usually invisible in lengths, so count markers instead. This is my analysis with illustrative numbers, not an experiment.
+- The source says a bimodal length distribution means two templates are mixed. Section 6.6 shows a mix is usually invisible in lengths, so count markers instead. This is my analysis with illustrative numbers, not an experiment.
 - The source says ChatML is the standard used by many models. The roles and content list is common, but each model's rendered markers differ, as Llama and Qwen show.
 - The source joins instruction and input with a blank line. LLaMA-Factory uses one newline. Either works if you use one joiner everywhere.
 - The source prints a Llama 3 example with no hidden turns. The Llama 3.1 template adds a date block by default, so its output differs.
-- Corrected from note 01: the response share $3/7$ was the share without a template, and the real value is lower (section 5).
+- Corrected from note 01: the response share $3/7$ was the share without a template, and the real value is lower (section 3).
+
+---
+
+## **Appendix A. Where the Numbers Come From**
+
+- Hand-calculated: every worked example in sections 3, 4 and 6, on a toy tokenizer where one word is one token.
+- Measured: every number labelled measured came from the verification script on CPU, using only the Python standard library.
+- Expected: how the GPU cells should behave. The sandbox has no GPU, so they were not run, and printed outputs are formats, not results.
+- Illustrative: the per-token losses in section 6.5 and the content-length spread in section 6.6.
+- From sources: template markers, default system turns, and field names, read from the model files and docs listed in section 11.
