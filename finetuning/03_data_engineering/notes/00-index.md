@@ -2,7 +2,7 @@
 
 **Outcome of the stage.** A dataset you can defend: sourced, licensed, deduplicated, decontaminated, format-checked, versioned and documented. **Exit criterion.** A public dataset on the Hub with a data card, a license table, a decontamination report, and a held-out split that no training run ever touched.
 
-This file is the map for the stage. It lists the notes in reading order, where each note's outputs go, the running example, the notation used across notes, and the GPU ladder that every calculation table uses. Update it after each new note. Notes 02 to 05 use the lean structure: the running example first, then what the trainer reads, why it matters with numbers, the extra classic example, the checks, the math, the notebook cells, pitfalls and limits, a short self-test, and sources. Note 01 is still the long first version, and the long versions of notes 02 to 05 are kept in `full-versions/`.
+This file is the map for the stage. It lists the notes in reading order, where each note's outputs go, the running example, the notation used across notes, and the GPU ladder that every calculation table uses. Update it after each new note. Notes 02 to 05 and 07 use the lean structure: the running example first, then what the trainer reads, why it matters with numbers, the extra classic example, the checks, the math, the notebook cells, pitfalls and limits, a short self-test, and sources. Note 01 is still the long first version, and the long versions of notes 02 to 05 are kept in `full-versions/`.
 
 ## **1. Reading Order and Status**
 
@@ -13,8 +13,8 @@ This file is the map for the stage. It lists the notes in reading order, where e
 | 03 | [03-dataset-catalog-and-licenses.md](03-dataset-catalog-and-licenses.md) | where data comes from, what you may use, license audit | done, lean |
 | 04 | [04-quality-and-deduplication.md](04-quality-and-deduplication.md) | exact, near and semantic duplicates, MinHash, LSH, reading rows | done, lean |
 | 05 | [05-decontamination.md](05-decontamination.md) | train-test overlap, n-gram coverage, Min-K%, harness status | done, lean |
-| 06 | 06-synthetic-data.md | rubric generation, model collapse | next |
-| 07 | 07-pii-and-eu-ai-act.md | scrubbing, provenance, documentation | planned |
+| 06 | 06-synthetic-data.md | rubric generation, model collapse | next (written after 07) |
+| 07 | [07-pii-and-eu-ai-act.md](07-pii-and-eu-ai-act.md) | scrubbing personal data, audit math, GDPR and EU AI Act dates | done, lean |
 | 08 | 08-domain-dataset-and-splits.md | build, split, version | planned |
 | 09 | 09-preflight-and-acceptance-gate.md | the exit checklist | planned |
 
@@ -127,8 +127,13 @@ Under template A, r1 has 12 tokens and 3 trained tokens. Under template B it has
 | $G_Q$, $G_X$, $F$ | evaluation n-grams indexed, training n-grams scanned, expected false matches | note 05 |
 | $\varphi$, $a_0$, $a_1$, $A$, $I$, $N_Q$ | leaked share, clean and leaked accuracy, observed accuracy, inflation, evaluation rows | note 05 |
 | $\alpha$, $S_\alpha$ | Min-K% share kept, Min-K% score | note 05 |
+| $\text{TP}$, $\text{FP}$, $\text{FN}$, $\text{prec}$, $\text{rec}$, $F_1$ | hits, false alarms, misses, precision, recall, F one | note 07 |
+| $\mu$, $N_{\text{span}}$, $N_{\text{miss}}$ | true spans per row, total true spans, missed spans | note 07 |
+| $n_{\text{audit}}$, $\delta$, $\lambda_{\text{up}}$ | audit size, allowed error, upper bound on the miss rate | note 07 |
+| $\omega$, $\text{Lo}$, $\text{Hi}$ | normal quantile 1.96, ends of the Wilson interval | note 07 |
+| $\Xi$, $\Xi_{\text{orig}}$, $\Xi_{\text{fb}}$ | fine-tune compute in FLOP, original model compute, fallback cut | note 07 |
 
-**Reading tips.** The letter $t$ always means a token position. Shares use Greek letters ($\rho$ rows, $\sigma$ tokens) so they never clash with $t$ or $T$. The letter $c$ means a constant overhead in note 02, while $c_k$ means a row count in note 01. The letter $q$ is the mixing share so it never clashes with $\pi_\theta$. The letter $g$ is a license group and nothing else. The letter $\nu$ is the n-gram size, and the threshold is $\chi_{\min}$ so it never clashes with the parameters $\theta$. The letter $\kappa$ is the number of hash functions, so it never clashes with $k$ from note 02. The planned symbols $\beta$ and $\eta$ are not used in this stage.
+**Reading tips.** The letter $t$ always means a token position. Shares use Greek letters ($\rho$ rows, $\sigma$ tokens) so they never clash with $t$ or $T$. The letter $c$ means a constant overhead in note 02, while $c_k$ means a row count in note 01. The letter $q$ is the mixing share so it never clashes with $\pi_\theta$. The letter $g$ is a license group and nothing else. The letter $\nu$ is the n-gram size, and the threshold is $\chi_{\min}$ so it never clashes with the parameters $\theta$. The letter $\kappa$ is the number of hash functions, so it never clashes with $k$ from note 02. The letter $\lambda$ is a miss rate in note 07, the same kind of rate as in note 04. The letter $\delta$ is the allowed error, and $\alpha$ stays the Min-K% share. The symbol $\omega$ avoids the logits $z$, and $\Xi$ avoids the content tokens $C$. The planned symbols $\beta$ and $\eta$ are not used in this stage.
 
 ---
 
@@ -229,6 +234,7 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 
 - The roadmap order was not pasted, so notes 03 to 09 follow the stage structure.
 - Notes are written from the source stage file (Mode B research with the source as input), and every correction to it is listed below.
+- Note 07 was written before note 06 at the user's request. The Stage 03 source file was not attached, so its claims were checked as listed in the handoff.
 - The experiment model is Qwen2.5-0.5B-Instruct and the dataset slice is `trl-lib/Capybara`, both small enough for every tier. The Hub declares no license for Capybara, so use it for statistics only.
 
 **Corrections to the source stage file so far.**
@@ -255,7 +261,11 @@ A lost-time check uses the lost share $f = H_{\text{lost}} / H_{\text{free}}$. F
 | 04 | Reading 100 rows only bounds a defect rate near 3 percent, so the source's "bad in 100 means bad in 1M" holds only for common defects. |
 | 05 | The harness flag --decontamination_ngrams_path was removed in March 2024 and is absent from lm_eval 0.4.13, whose evaluator never reads decontamination, so the source's harness procedure and lab 4 cannot run as written. |
 | 05 | The source gives no n-gram size or cut. Use and record a rule such as Tulu 3's 8-gram matching with coverage above 0.5 on prompts, and drop datasets that overlap more than 2 percent of an evaluation. |
+| 07 | The fallback compute cuts are one third of 10^23 and one third of 10^25 FLOP, about 3.3e22 and 3.3e24, not about 3e21 and 3e24 (Commission guidelines on general purpose AI models). |
+| 07 | The Presidio anonymizer cannot run without the analyzer results, so a call that skips the analyzer step raises a TypeError (measured with presidio 2.2.366). |
+| 07 | Consent is one of six lawful bases in GDPR Article 6, and the EDPB discusses legitimate interest for AI models. The modifier test is a significant change in generality, capabilities or systemic risk, with a non-binding compute criterion. |
+| 07 | The Omnibus dates in the handoff are confirmed: Regulation 2026/1744, in force 27 July 2026, high-risk dates 2 December 2027 and 2 August 2028. PII-Codes was not found in two searches, so it is not verified. |
 
 **Not checked in note 03.** ToolBench, ToolACE, AIME, ARC-AGI, the multimodal sets, Wikipedia, Common Crawl and The Stack licenses.
 
-**Still to verify in later notes.** The EU AI Act dates and the Digital Omnibus claim (note 07), the distilabel release date and API (note 06), and the compute threshold of about $3 \times 10^{21}$ FLOP (note 07).
+**Still to verify in later notes.** The distilabel release date and API (note 06). The EU AI Act dates, the Digital Omnibus and the compute cut were checked in note 07, except the Official Journal text itself, which did not load.
