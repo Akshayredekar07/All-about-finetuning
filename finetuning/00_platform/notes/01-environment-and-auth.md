@@ -1,7 +1,12 @@
 # **01 – Environment and Auth**
 
-Everything you need before touching the Hub: install, tokens, every login method, and how to check who you are.
-Verified against the current `hf` CLI docs (huggingface_hub 1.x). The old `huggingface-cli` still works but prints a deprecation warning, so use `hf`.
+This notebook covers everything you need before using the Hugging Face Hub:
+
+- Install `huggingface_hub` and the `hf` CLI
+- Create and store Hugging Face tokens safely
+- Log in from the terminal, Python, Jupyter/Colab, and CI/CD
+- Check which account and token you are using
+- Switch, list, and remove saved tokens
 
 ---
 

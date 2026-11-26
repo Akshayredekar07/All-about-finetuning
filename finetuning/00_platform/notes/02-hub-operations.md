@@ -1,6 +1,10 @@
 # **02 – Hub Operations: Download, Cache, Upload**
 
-Everything that moves files between your machine and the Hub. Uploads need the **write** token (`HF_WRITE_TOKEN`); downloads need at most the **read** token (`HF_TOKEN`).
+This notebook covers downloading models and datasets, managing the local Hugging Face cache, and uploading or updating files on the Hub.
+
+Use `HF_TOKEN` for downloads and `HF_WRITE_TOKEN` for any action that creates, changes, or deletes something on the Hub.
+
+Topics: `hf_hub_download()`, `snapshot_download()`, cache management, `upload_file()`, `upload_folder()`, and file deletion.
 
 ---
 

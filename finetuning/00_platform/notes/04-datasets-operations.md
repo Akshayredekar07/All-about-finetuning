@@ -1,6 +1,25 @@
 # **04 – Datasets Operations**
 
-Every operation in the `datasets` library that Lab 0-5 sweeps. Written for **datasets 4.x**, where dataset loading scripts and `trust_remote_code` were removed.
+This notebook covers the main `datasets` library operations used in Lab 0-5:
+
+- Load datasets from the Hugging Face Hub and local files
+- Inspect a dataset’s structure, features, splits, and size
+- Select, filter, map, and transform examples
+- Save, export, and reload datasets
+- Work with DatasetDict objects and dataset configurations
+
+This notebook is written for **`datasets` 4.x**.
+
+In this version, dataset loading scripts and `trust_remote_code` have been removed. Prefer Hub-hosted datasets, Parquet/CSV/JSON files, or datasets that provide native loading support.
+
+## **What you will learn**
+
+- `load_dataset()` for Hub datasets and local files
+- `Dataset` and `DatasetDict` objects
+- Inspecting columns, features, splits, and dataset size
+- Filtering, selecting, shuffling, and transforming examples
+- Saving datasets locally and exporting them to common formats
+- Common errors caused by removed loading scripts or incompatible dataset formats
 
 ---
 
