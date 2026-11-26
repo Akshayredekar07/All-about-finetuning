@@ -1,0 +1,13 @@
+text,label,n_words
+great movie,1,2
+terrible acting and a boring plot,0,6
+loved every minute,1,3
+not worth the money,0,4
+a true masterpiece of cinema,1,5
+I fell asleep,0,3
+funny and warm,1,3
+the ending ruined it,0,4
+beautiful music,1,2
+too long and too loud,0,5
+would watch again,1,3
+a complete mess,0,3
