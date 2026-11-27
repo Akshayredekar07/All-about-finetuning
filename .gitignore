@@ -70,3 +70,11 @@ gpt2-hp-search/
 # Checkpoint subfolders in general, in case output_dir names change later
 checkpoint-*/
 **/checkpoint-*/
+
+
+datasets/downloads/*
+datasets/downloads/
+finetuning/00_platform/datasets/downloads/
+finetuning/00_platform/datasets/upload/
+# /teamspace/studios/this_studio/All-about-finetuning/
+# **/downloads/
