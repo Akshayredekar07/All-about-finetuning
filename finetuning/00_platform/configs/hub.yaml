@@ -1,0 +1,48 @@
+# ── hub.yaml: names, folders and switches for stage 00 ──
+# Edit values here instead of editing notebooks.
+
+# ── folders (relative to 00_platform/) ──
+paths:
+  downloads: datasets/downloads      # pulled from the Hub, git-ignored
+  upload: datasets/upload            # generated here, pushed to the Hub, git-ignored
+  results: results                   # lab result files, committed
+  release_source: hub/release        # model card + files we publish
+  space_source: hub/spaces/sentiment-analysis
+
+# ── env var NAMES (the tokens themselves stay in .env) ──
+env:
+  read_token: HF_READ_TOKEN
+  write_token: HF_WRITE_TOKEN
+  finegrained_token: HF_FINEGRAINED_TOKEN     # optional
+
+# ── repo names; the lab adds "<user>/" in front ──
+repos:
+  scratch: auth-matrix-scratch
+  model: release-lab-model
+  space: release-lab-space
+  dataset: datasets-lab-tiny
+  dataset_files: datasets-lab-files
+  config_lab: config-lab-model
+
+# ── release settings ──
+release:
+  private: true
+  tags: [v1.0, v1.1]
+  branch: dev
+
+# ── space settings ──
+space:
+  sdk: gradio
+  private: true
+
+# ── switches: turn slow, paid or optional cells on and off ──
+switches:
+  run_inference: false     # Inference Providers need paid credits (402 otherwise)
+  run_gated_test: true
+  delete_after: true       # delete scratch repos at the end of a lab
+
+# ── models used by the labs ──
+models:
+  gated_repo: google/gemma-2-2b
+  chat_model: Qwen/Qwen2.5-7B-Instruct
+  sentiment: distilbert/distilbert-base-uncased-finetuned-sst-2-english
