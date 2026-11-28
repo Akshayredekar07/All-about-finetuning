@@ -74,3 +74,10 @@ checkpoint-*/
 # Keep model-selection notes while ignoring other models directories
 !/finetuning/01_model_selection/models/
 !/finetuning/01_model_selection/models/**
+
+datasets/downloads/*
+datasets/downloads/
+finetuning/00_platform/datasets/downloads/
+finetuning/00_platform/datasets/upload/
+# /teamspace/studios/this_studio/All-about-finetuning/
+# **/downloads/
