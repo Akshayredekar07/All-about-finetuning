@@ -70,3 +70,7 @@ gpt2-hp-search/
 # Checkpoint subfolders in general, in case output_dir names change later
 checkpoint-*/
 **/checkpoint-*/
+
+# Keep model-selection notes while ignoring other models directories
+!/finetuning/01_model_selection/models/
+!/finetuning/01_model_selection/models/**

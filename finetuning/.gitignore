@@ -10,3 +10,7 @@ __pycache__/
 outputs/
 wandb/
 .ipynb_checkpoints/
+
+# Keep files in the model-selection catalog, including otherwise ignored model formats
+!01_model_selection/models/
+!01_model_selection/models/**

@@ -1,0 +1,92 @@
+# Candidate base models for Stage 01. Date checked: 28 Nov 2026.
+# status: verified = checked on the web on that date, earlier_draft = from an older draft, not_checked = not looked at yet
+# memory_gb values are vendor needs unless the key says peak_gib (measured, GiB).
+# Capability is left empty until the 50 prompt probe in decision_framework.md is run.
+
+tiers:
+  A: {gpu: "16 GB T4", role: "fast loops"}
+  B: {gpu: "24 GB L4 (22.49 GiB usable, verified)", role: "real target"}
+  C: {gpu: "48 to 80 GB", role: "larger fine tunes"}
+  D: {gpu: "rack", role: "serve only"}
+
+candidates:
+  - id: gemma_4_e4b
+    tier: A
+    pick: provisional
+    license: "Apache 2.0"
+    total_params: null
+    train_memory_gb: 10
+    tool_path: "Unsloth"
+    status: verified
+  - id: gemma_4_e2b
+    tier: A
+    pick: backup
+    license: "Apache 2.0"
+    train_memory_gb: 8
+    tool_path: "Unsloth"
+    status: verified
+  - id: gemma_4_12b
+    tier: B
+    pick: no
+    license: "Apache 2.0"
+    qlora_gb: 17
+    qlora_unit_recorded: false
+    tool_path: "Unsloth"
+    status: verified
+  - id: gemma_4_31b
+    tier: B
+    pick: provisional
+    license: "Apache 2.0"
+    qlora_gb: 22
+    peak_gib: null
+    tool_path: "Unsloth"
+    status: verified
+  - id: qwen3_8_27b
+    tier: B
+    pick: runner_up
+    license: "Apache 2.0"
+    total_params_b: 27
+    context: 262144
+    qlora_gb: 24
+    lora_gb_plan: 56
+    tool_path: "Unsloth"
+    status: verified
+  - id: muse_glimmer_30b
+    tier: C
+    pick: no
+    license: "Apache 2.0 plus a separate usage policy"
+    total_params_b: 29.6
+    context: 131072
+    qlora_peak_gib: 22.57
+    peak_seq_len: 1024
+    status: verified
+  - id: inkling_2_mini
+    tier: C
+    pick: no
+    license: "Apache 2.0 plus a separate acceptable use policy"
+    total_params_b: 26.4
+    active_params_b: 3.4
+    context: 1000000
+    qlora_peak_gib: 25.7
+    peak_seq_len: 1024
+    lora_16bit_peak_gb: 59
+    status: verified
+  - id: nemotron_bolt_e4b
+    tier: A
+    pick: no
+    license: "OpenMDW 1.1 over Gemma Apache 2.0"
+    tool_path: "Gemma path, not confirmed"
+    status: not_checked
+  - id: nemotron_lightning_30b_a3b
+    tier: C
+    pick: no
+    license: "OpenMDW 1.1"
+    train_memory_gb: null
+    status: not_checked
+
+serve_only:
+  - {id: inkling_2_small, license: "Apache 2.0", size_4bit_gb: 310, status: earlier_draft}
+  - {id: kimi_k3_1_pro, license: "needs a separate agreement above 20 million dollars", size_gb: 1560, status: verified}
+  - {id: muse_spark_open, license: "Muse Model License, attribution required", status: verified}
+  - {id: qwen3_8_2_4t, license: "see note", status: verified}
+  - {id: deepseek_v4_flash, license: "MIT", params_b: "284 or 304, open conflict", status: verified}
